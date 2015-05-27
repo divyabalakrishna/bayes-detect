@@ -1,0 +1,6 @@
+* start with config.ini
+* python image_generator.py (from iside folder)
+* everything is in files/
+* python model_nest_som.py (from inside nested_som)
+* post_sampling
+* python plot_results.py

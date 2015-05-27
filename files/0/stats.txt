@@ -1,2 +1,2 @@
-seconds,511
-Log evaluations,46731
+seconds,202
+Log evaluations,47556
