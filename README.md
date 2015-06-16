@@ -6,6 +6,8 @@ This is a library for performing source detection in single band sky images usin
 
 
 ## Authors
+Divya Balakrishna
+
 Richard Lee
 
 Matias Carrasco Kind

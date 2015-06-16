@@ -5,11 +5,11 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.cluster import DBSCAN
 from sklearn import metrics
-from sklearn.datasets.samples_generator import make_blobs
+
 from sklearn.preprocessing import StandardScaler
-
+from sklearn.cluster import MeanShift, estimate_bandwidth
 from ConfigParser import SafeConfigParser
-
+from itertools import cycle
 from scipy.signal import argrelextrema
 
 import seaborn as sns #makes the plots look pretty
@@ -170,57 +170,38 @@ print "display"
 #plt.show()
 
 
-"""
+#Mean-Shift cluster
+X=zeros((len(w),2))
+X[:,0]=x[w]
+X[:,1]=y[w]
 
-#DBSCAN
+# The following bandwidth can be automatically detected using
+bandwidth = estimate_bandwidth(X, quantile=0.1, n_samples=300)
 
-XX=zeros((len(w),4))
-XX[:,0]=x[w]
-XX[:,1]=y[w]
-#XX[:,2]=r[w]
-#XX[:,3]=a[w]
-#XX[:,2]=L[w]
+ms = MeanShift(bandwidth=bandwidth, bin_seeding=True)
+ms.fit(X)
+labels = ms.labels_
+cluster_centers = ms.cluster_centers_
 
-XX = StandardScaler().fit_transform(XX)
+labels_unique = np.unique(labels)
+n_clusters_ = len(labels_unique)
 
-db = DBSCAN(eps=0.07, min_samples=15).fit(XX)
+print("number of estimated clusters : %d" % n_clusters_)
+plt.title('Estimated number of clusters: %d' % n_clusters_)
 
-core_samples_mask = zeros_like(db.labels_, dtype=bool)
-core_samples_mask[db.core_sample_indices_] = True
-labels = db.labels_
+plt.figure(1)
+plt.clf()
 
+colors = cycle('bgrcmykbgrcmykbgrcmykbgrcmyk')
+for k, col in zip(range(n_clusters_), colors):
+    my_members = labels == k
+    cluster_center = cluster_centers[k]
+    plt.plot(X[my_members, 0], X[my_members, 1], col + '.')
+    plt.plot(cluster_center[0], cluster_center[1], 'o', markerfacecolor='#ffffff',
+             markeredgecolor='k', markersize=15)
+plt.title('Estimated number of clusters: %d' % n_clusters_)
 
-n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
-
-
-print n_clusters_ , 'Clusters'
-
-unique_labels = set(labels)
-colors = plt.cm.jet(linspace(0, 1, len(unique_labels)))
-
-plt.figure()
-
-
-for k, col in zip(unique_labels, colors):
-    if k == -1:
-        # Black used for noise.
-        col = 'k'
-        continue
-
-    class_member_mask = (labels == k)
-
-    xy = XX[class_member_mask & core_samples_mask]
-    plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col,
-             markeredgecolor='k', markersize=3)
-
-    xy = XX[class_member_mask & ~core_samples_mask]
-    plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col,
-             markeredgecolor='k', markersize=3)
+plt.savefig(output_folder + "/plots/clusters.png", bbox_inches="tight")
 
 
 
-
-
-
-
-"""

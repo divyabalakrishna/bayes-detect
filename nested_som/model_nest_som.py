@@ -11,6 +11,7 @@ This is preliminary
 """
 from numpy import *
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 #import pyfits as pf
 import sys,os
 import scipy
@@ -260,7 +261,22 @@ def make_plot(points,AC,name):
     fig.savefig(output_folder + '/plots/4plot/4plot'+fname+'.png',bbox_inches='tight')
     fig.clear()
     #all these just show various panels which were already shown earlier
+   
+def make_3dplot(AC,name):
+    fig=plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
     
+    ax.scatter(AC[:,0],AC[:,1],AC[:,2], s=3, marker='.')
+
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Likelihood')
+    
+    fname="%05d" % name
+
+    #proj.set_title('Posteriors in 3D after cut')
+    fig.savefig(output_folder + "/plots/3d/3d"+fname+".png", bbox_inches="tight")
+
 #make source. this is the same as image_gen's make source
 def make_source(src_array,height,width):
     x = arange(0, width)
@@ -476,6 +492,7 @@ os.system('mkdir -p ' + output_folder + '/plots/detected')
 os.system('mkdir -p ' + output_folder + '/plots/6plot')
 os.system('mkdir -p ' + output_folder + '/plots/4plot')
 os.system('mkdir -p ' + output_folder + '/plots/somplot')
+os.system('mkdir -p ' + output_folder + '/plots/3d')
 
 data = load(image_location)
 data_or = load(no_noise_location)
@@ -526,10 +543,11 @@ for i in xrange(Niter):
         Map,new,neval=sample_som(i,AC,neval,minL,nt=4,nit=150,create='yes',sample='yes')
         #create=yes -> make a new som
         make_plot(points,AC,i)
-        #plot things with make_plot
-        sources, detected, detected_count = detect_sources(AC, i, detected, detected_count, neighbor_dist)
+        make_3dplot(AC,i)
+	#plot things with make_plot
+        #sources, detected, detected_count = detect_sources(AC, i, detected, detected_count, neighbor_dist)
         #run detection on the active points
-        look_at_results(sources, i)
+        #look_at_results(sources, i)
         #plot the detected items
     else:
         Map,new,neval=sample_som(i,AC,neval,minL,nt=4,nit=150,create='no',sample='yes',inM=Map)
