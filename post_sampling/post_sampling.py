@@ -56,8 +56,7 @@ def plot_segments(ax, locs, vals, min_vals, max_vals):
         ax.plot(locs[mask], vals[mask], color=random_color())
         #color is chosen randomly, so sometimes it makes a bad selection
 
-def get_likelihood(X,Y):
-    print len(X),len(Y)
+def get_likelihood(X,Y,name):
     L = []
     R = []
     A = []
@@ -74,6 +73,44 @@ def get_likelihood(X,Y):
     cluster[:,2] = R
     cluster[:,3] = A
     cluster[:,4] = L
+    
+    x_p = []
+    y_p = []
+    r_p = []
+    a_p = []
+    l_p = []
+
+    minX = X[0]
+    maxX = X[0]
+    for i in range(len(X)):
+        if(minX > X[i]): minX = X[i]
+        if(maxX < X[i]): maxX = X[i]
+    
+    minY = Y[0]
+    maxY = Y[0]
+    for i in range(len(Y)):
+        if(minY > Y[i]): minY = Y[i]
+        if(maxY < Y[i]): maxY = Y[i]
+    print minX,maxX,minY,maxY
+    
+    for i in range(len(x)):
+        if(x[i] >= minX and x[i] <=maxX and y[i] >=minY and y[i] <=maxY):
+            x_p.append(x[i])
+            y_p.append(y[i])
+            r_p.append(r[i])
+            a_p.append(a[i])
+            l_p.append(l[i])
+    cluster_p = zeros((len(x_p),5))
+    cluster_p[:,0] = x_p
+    cluster_p[:,1] = y_p
+    cluster_p[:,2] = r_p
+    cluster_p[:,3] = a_p
+    cluster_p[:,4] = l_p
+    savetxt(output_folder + "/cluster"+str(name)+".txt", cluster_p,fmt='%.6f')
+    x1,y1,r1,a1,l1 = loadtxt(output_folder + "/cluster"+str(name)+".txt", unpack=True)
+    #print x1
+    #print l_p
+    make_plot("cluster"+str(name), x1,y1,r1,a1,l1)
     return cluster
 
 def make_plot(filename, x, y, r, a, l):
@@ -99,10 +136,10 @@ def make_plot(filename, x, y, r, a, l):
     ax2.plot(xm[xmask],Lmx[xmask],'r-')
     smoothed_x = smooth(Lmx[xmask])
     ax2.plot(xm[xmask], smoothed_x, 'g-')
-    mins = compute_mins(xm[xmask], smoothed_x)
-    maxes = compute_maxes(xm[xmask], smoothed_x)
+    #mins = compute_mins(xm[xmask], smoothed_x)
+    #maxes = compute_maxes(xm[xmask], smoothed_x)
    
-    plot_segments(ax2, xm[xmask], smoothed_x, mins, maxes)
+    #plot_segments(ax2, xm[xmask], smoothed_x, mins, maxes)
     ax2.set_title('X vs Likelhood after cut')
 
     print "3"
@@ -127,10 +164,10 @@ def make_plot(filename, x, y, r, a, l):
     smoothed_y = smooth(Lmy[ymask])
     ax4.plot(ym[ymask], smoothed_y, 'g-')
 
-    mins = compute_mins(ym[ymask], smoothed_y)
-    maxes = compute_maxes(ym[ymask], smoothed_y)
+    #mins = compute_mins(ym[ymask], smoothed_y)
+    #maxes = compute_maxes(ym[ymask], smoothed_y)
     
-    plot_segments(ax4, ym[ymask], smoothed_y, mins, maxes)
+    #plot_segments(ax4, ym[ymask], smoothed_y, mins, maxes)
 
     ax4.set_title('Y vs Likelhood after cut')
 
@@ -188,7 +225,7 @@ plt.figure()
 clusters = [XX[labels == i] for i in xrange(n_clusters_)]
 
 for i in range(len(clusters)):
-    clusters[i] = get_likelihood(clusters[i][:,0], clusters[i][:,1])
+    clusters[i] = get_likelihood(clusters[i][:,0], clusters[i][:,1], i)
     #make_plot("cluster"+str(i), clusters[i][:,0],clusters[i][:,1],clusters[i][:,2],clusters[i][:,3],clusters[i][:,4])
 
 for k, col in zip(unique_labels, colors):
