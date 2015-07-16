@@ -42,12 +42,12 @@ def binned_max(xvalues, yvalues, start, stop, num_points):
 
 #for each x location, if it is smaller than its neighbors in the neighborhood of (x-window_size, x+window_size) then its a min
 def compute_mins(xlocs, yvals, window_size = 10):
-    yval_locs = argrelextrema(yvals, np.less, order = window_size)[0]
+    yval_locs = argrelextrema(yvals, np.less)[0]
     return xlocs[yval_locs]
 
 #for each x location, if it is bigger than its neighbors in the neighborhood of (x-window_size, x+window_size) then its a max
 def compute_maxes(xlocs, yvals, window_size = 10):
-    yval_locs = argrelextrema(yvals, np.greater, order = window_size)[0]
+    yval_locs = argrelextrema(yvals, np.greater)[0]
     return xlocs[yval_locs]
 
 def compute_intervals(mins, maxes):

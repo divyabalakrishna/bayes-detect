@@ -236,6 +236,8 @@ def make_plot(points,AC,name):
     XX[:,1]=AC[:,1]
     XX = StandardScaler().fit_transform(XX)
  
+    N = len(XX[:,0])
+    eps = 2*(200/sqrt(N))
     db = DBSCAN().fit(XX)
 
     core_samples_mask = zeros_like(db.labels_, dtype=bool)
@@ -251,7 +253,7 @@ def make_plot(points,AC,name):
     ax3=fig.add_subplot(2,3,2)
     
     storeClusters = False
-    if(highestClusterCount["count"] < n_clusters):
+    if(highestClusterCount["count"] <= n_clusters):
         savetxt(output_folder + "/active_points.txt", AC,fmt='%.6f')
         highestClusterCount["count"] = n_clusters
         highestClusterCount["iteration"] = name
@@ -268,13 +270,6 @@ def make_plot(points,AC,name):
         xy = XX[class_member_mask]
         ax3.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col,
              markeredgecolor='k', markersize=5)
-        x,y = mean(xy[:,-2:],axis = 0)
-        ax3.plot(x,y, 'o', color='#ffffff',
-             markeredgecolor='k', markersize=10)
-        
-        x,y = median(xy[:,-2:],axis = 0)
-        ax3.plot(x,y, 'o', color='#000000',
-             markeredgecolor='k', markersize=10)
         
         if(storeClusters and k != -1):
             clusters.append(xy)
@@ -656,9 +651,8 @@ for i in xrange(Niter):
     AC[reject,4]=newL
     
 print clusterCount
-print highestClusterCount,len(clusters)
 
-make_clusterCountPlot(clusterCount)
+#make_clusterCountPlot(clusterCount)
 
 stop = timeit.default_timer()
 

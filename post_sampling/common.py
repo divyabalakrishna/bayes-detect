@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.signal import argrelextrema
+from scipy.signal import argrelmin,argrelmax
 
 def smooth(values, window_len = 7, window="flat"):
     #window_len must be odd
@@ -33,11 +33,15 @@ def binned_max(xvalues, yvalues, start, stop, num_points):
     return (w, mask, bins, Lval)
 
 def compute_mins(xlocs, yvals, window_size = 10):
-    yval_locs = argrelextrema(yvals, np.less, order = window_size)[0]
+    yval_locs = argrelmin(yvals, order = window_size)[0]
+    if len(yval_locs) == 0:
+        return [];
     return xlocs[yval_locs]
 
 def compute_maxes(xlocs, yvals, window_size = 10):
-    yval_locs = argrelextrema(yvals, np.greater, order = window_size)[0]
+    yval_locs = argrelmax(yvals, order = window_size)[0]
+    if len(yval_locs) == 0:
+        return [];
     return xlocs[yval_locs]
 
 def compute_intervals(mins, maxes):
@@ -74,5 +78,3 @@ def compute_intervals(mins, maxes):
         index += 1
 
     return np.array(points)
-
-        
