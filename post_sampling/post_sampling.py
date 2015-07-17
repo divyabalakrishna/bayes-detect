@@ -169,7 +169,7 @@ def make_plot(filename, x, y, r, a, l):
     ax1.scatter(x,y,s=3,marker='.')
     ax1.set_xlabel('X')
     ax1.set_ylabel('Y')
-    ax1.set_title('all posteriors before cut')
+    ax1.set_title('all active points')
     ax1.set_xlim(0,width)
     ax1.set_ylim(0,height)
 
@@ -187,17 +187,7 @@ def make_plot(filename, x, y, r, a, l):
     maxes = compute_maxes(xm[xmask], smoothed_x)
     if len(mins) != 0 and len(maxes) != 0:
         plot_segments(ax2, xm[xmask], smoothed_x, mins, maxes)
-    ax2.set_title('X vs Likelhood after cut')
-
-    print "3"
-    ax3=fig.add_subplot(2,2,2)
-
-    ax3.scatter(x[w],y[w],s=3,marker='.')
-    ax3.set_xlabel('X')
-    ax3.set_ylabel('Y')
-    ax3.set_xlim(0,width)
-    ax3.set_ylim(0,height)
-    ax3.set_title('posteriors after cut')
+    ax2.set_title('X vs Likelhood')
 
     w, ymask, ym, Lmy = binned_max(y, l, 0, height, 600)
 
@@ -216,7 +206,13 @@ def make_plot(filename, x, y, r, a, l):
     if len(mins) != 0 and len(maxes) != 0:
         plot_segments(ax4, ym[ymask], smoothed_y, mins, maxes)
 
-    ax4.set_title('Y vs Likelhood after cut')
+    ax4.set_title('Y vs Likelhood')
+   
+    print "5"
+    ax5 = fig.add_subplot(2,2,2)
+    data = load(output_folder + "/0_clean.npy")
+    ax5.imshow(flipud(data),extent=[0,width,0,height])
+    ax5.set_title('Original image ')
 
     print "save"
 
