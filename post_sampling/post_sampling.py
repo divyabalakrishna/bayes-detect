@@ -130,7 +130,7 @@ def dbscan(XX,name):
         my = mean(xy[:,1])
         centers.append([mx,my])
         
-    plt.title('Estimated number of clusters: %d' % n_clusters_)
+    
     
     return clusters,plt,centers
 
@@ -284,7 +284,7 @@ for i in range(len(clusters)):
     m = maxY
     if maxX > maxY:
         m = maxX
-    
+    print "hoi",m
     if m != 0:
         centers = k_means(XX,m)
         for i in centers:
@@ -294,6 +294,7 @@ for i in range(len(clusters)):
         coordsX.append(c[i][0])
         coordsY.append(c[i][1])
 plt.plot(coordsX, coordsY, 'o', markerfacecolor="g", markersize=10)
+plt.title('Estimated number of clusters: %d' % len(coordsX))
 plt.savefig(output_folder + "/plots/clusters_active_points.png", bbox_inches="tight")
 #print X
 w = make_plot("summary_active_points", X,Y,R,A,L)

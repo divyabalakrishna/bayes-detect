@@ -1,0 +1,53 @@
+#master config file
+
+[Misc]
+prefix : 0
+location : ../files
+
+[Image]
+width : 200
+height : 200
+
+#number of items in the test image
+num_items : 10
+#noise level
+noise : 3
+#amplitude
+amp_min : 1
+amp_max : 12
+#radius
+rad_min : 1
+rad_max : 10
+
+[Sampling]
+#settings for the sampler. This is separate from image generation.
+width : 200
+height : 200
+#noise level
+noise : 3
+#amplitude
+amp_min : 1
+amp_max : 12
+#radius
+rad_min : 1
+rad_max : 10
+#number of iterations
+niter : 28501
+#number of active points
+num_active : 10000
+#num iterations before computing new som
+num_som_iter : 500
+#num points for the som
+num_som_points : 500
+
+[Output]
+output_filename : out_points_som.txt
+#plot is a bool for drawing plots or not
+plot : true
+
+[Detection]
+neighbor_dist : 1
+#if two points have a distance below n_dist they are considered the same point
+cutoff : 4
+#number of times an item must be detected before it is written to the final source list
+detected_filename : detected.txt
