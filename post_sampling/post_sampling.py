@@ -299,7 +299,8 @@ for i in range(len(originalData)):
     fig = plt.gcf()
     fig.gca().add_artist(circle)
     print originalData[i][0],originalData[i][1],originalData[i][3]
-#plt.plot(coordsX, coordsY, 'o', markerfacecolor="g", markersize=5)
+plt.plot(coordsX, coordsY, 'o', markerfacecolor="r", markersize=2)
+plt.plot(originalData[:,0], originalData[:,1], 'o', markerfacecolor="r", markersize=2)
 plt.title('Estimated number of clusters: %d' % len(coordsX))
 plt.savefig(output_folder + "/plots/clusters_active_points" + str(datetime.now()) + ".png", bbox_inches="tight")
 

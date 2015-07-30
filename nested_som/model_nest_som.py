@@ -624,12 +624,13 @@ for i in xrange(Niter):
         #create=yes -> make a new som
         count = make_plot(points,AC,i)
         #print count, highestClusterCount
-        if(count < highestClusterCount["count"]): break
-	
+        if(count < highestClusterCount["count"]): 
+            Niter = highestClusterCount["iteration"]*2
+	print count, highestClusterCount,Niter
         clusterCount[l][1] = count
         clusterCount[l][0] = i
         l = l+1
-        make_3dplot(AC,i)
+        #make_3dplot(AC,i)
         
 	#plot things with make_plot
         #sources, detected, detected_count = detect_sources(AC, i, detected, detected_count, neighbor_dist)
