@@ -13,6 +13,7 @@ from sklearn.cluster import MeanShift, estimate_bandwidth
 from ConfigParser import SafeConfigParser
 from itertools import cycle
 from scipy.signal import argrelextrema
+from datetime import *
 
 import seaborn as sns #makes the plots look pretty
 
@@ -107,9 +108,6 @@ def dbscan(XX,name):
 
     n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
 
-
-    print n_clusters_ , 'Clusters'
-
     unique_labels = set(labels)
     colors = plt.cm.jet(linspace(0, 1, len(unique_labels)))
     clusters = [XX[labels == i] for i in xrange(n_clusters_)]
@@ -118,20 +116,16 @@ def dbscan(XX,name):
     centers = []
     for k, col in zip(unique_labels, colors):
         class_member_mask = (labels == k)
-        xy = XX[class_member_mask]
+        xy = XX[class_member_mask & core_samples_mask]
         if k == -1:
             # Black used for noise.
             col = 'k'
             X,Y,R,A,L = filterNoise(xy[:,0],xy[:,1])
             continue
-        plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col,
-             markeredgecolor='k', markersize=5)
+        plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col,markeredgecolor='k', markersize=0.1)
         mx = mean(xy[:,0])
         my = mean(xy[:,1])
         centers.append([mx,my])
-        
-    
-    
     return clusters,plt,centers
 
 def random_color():
@@ -152,13 +146,6 @@ def plot_segments(ax, locs, vals, min_vals, max_vals):
         mask = logical_and(lower_mask, upper_mask)
         ax.plot(locs[mask], vals[mask], color=random_color())
         #color is chosen randomly, so sometimes it makes a bad selection
-    '''x = intervals[-1][1]
-    y = floor(sorted(locs)[-1]).astype("int")
-    lower_mask = locs > x
-    upper_mask = locs < y
-    mask = logical_and(lower_mask, upper_mask)
-    ax.plot(locs[mask], vals[mask], color=random_color())'''
-
 
 def make_plot(filename, x, y, r, a, l):
     #first plot of parameter vs L
@@ -191,7 +178,7 @@ def make_plot(filename, x, y, r, a, l):
 
     w, ymask, ym, Lmy = binned_max(y, l, 0, height, 600)
 
-    print "4"
+    print "3"
     ax4=fig.add_subplot(2,2,4)
     ax4.plot(y[w],l[w],'k,')
     ax4.set_xlim(0, width)
@@ -208,7 +195,7 @@ def make_plot(filename, x, y, r, a, l):
 
     ax4.set_title('Y vs Likelhood')
    
-    print "5"
+    print "4"
     ax5 = fig.add_subplot(2,2,2)
     data = load(output_folder + "/0_clean.npy")
     ax5.imshow(flipud(data),extent=[0,width,0,height])
@@ -241,25 +228,22 @@ def k_means(X, n_clusters):
     #print "cluster_count",len(k_means_cluster_centers)
     
     colors = plt.cm.Spectral(np.linspace(0, 1, len(k_means_labels_unique)))
+    clusters = []
     for k, col in zip(range(len(k_means_cluster_centers)), colors):
-        my_members = k_means_labels == k
+        my_members = (k_means_labels == k)
+        temp = zeros((len(X[my_members, 0]),2))
+        temp[:,0] = X[my_members, 0]
+        temp[:,1] = X[my_members, 1]
         cluster_center = k_means_cluster_centers[k]
-    return k_means_cluster_centers
-'''#second plot of 3d parameters (x,y) vs L
-fig= plt.figure()
+        clusters.append(temp)
+    return k_means_cluster_centers,clusters
 
-proj = fig.add_subplot(111, projection='3d')
-proj.scatter(x[w],y[w],l[w],s=3,marker='.')
-proj.set_xlim(0,width)
-proj.set_ylim(0,height)
-proj.set_xlabel('X')
-proj.set_ylabel('Y')
-proj.set_zlabel('Likelihood')
-#proj.set_title('Posteriors in 3D after cut')
-plt.savefig(output_folder + "/plots/3dPosterior_active_points.png", bbox_inches="tight")
-
-print "display"
-#plt.show()'''
+def calculateRadius(X,C):
+    r = 0
+    for i in range(len(X)):
+        r += pow((X[i][0]-C[0]),2) + pow((X[i][1]-C[1]),2)
+    r = sqrt(r/len(X))
+    return r 
 
 XX=zeros((len(x),2))
 XX[:,0]=x
@@ -268,6 +252,9 @@ clusters,plt,c = dbscan(XX,"clusters_active_points")
 
 coordsX = []
 coordsY = []
+coordsR = []
+coordsA = []
+coordsL = []
 for i in range(len(clusters)):
     x1,y1,r1,a1,l1 = filterCluster(clusters[i][:,0],clusters[i][:,1]) 
     XX=zeros((len(x1),2))
@@ -284,17 +271,36 @@ for i in range(len(clusters)):
     m = maxY
     if maxX > maxY:
         m = maxX
-    print "hoi",m
     if m != 0:
-        centers = k_means(XX,m)
-        for i in centers:
-            coordsX.append(i[0])
-            coordsY.append(i[1])
+        centers,kmeans_clusters = k_means(XX,m)
+        colors = plt.cm.Spectral(np.linspace(0, 1, len(clusters)))
+        for i, col in zip(range(len(centers)), colors):
+            coordsX.append(centers[i][0])
+            coordsY.append(centers[i][1])
+            #plt.plot(kmeans_clusters[i][:,0],kmeans_clusters[i][:,1], 'o', markerfacecolor=col, markersize=5)
+            
+            coordsR.append(calculateRadius(kmeans_clusters[i],centers[i]))
+
     else:
         coordsX.append(c[i][0])
         coordsY.append(c[i][1])
-plt.plot(coordsX, coordsY, 'o', markerfacecolor="g", markersize=10)
+        coordsR.append(calculateRadius(XX,c[i]))
+
+for i in range(len(coordsX)):
+    circle =  plt.Circle((coordsX[i],coordsY[i]),coordsR[i],edgecolor = 'r',facecolor='none')
+    fig = plt.gcf()
+    fig.gca().add_artist(circle)
+    print coordsX[i],coordsY[i],coordsR[i]
+
+originalData = np.load(output_folder +"/0_srcs.npy")
+
+for i in range(len(originalData)):
+    circle =  plt.Circle((originalData[i][0],originalData[i][1]),originalData[i][3],edgecolor = 'k',facecolor='none')
+    fig = plt.gcf()
+    fig.gca().add_artist(circle)
+    print originalData[i][0],originalData[i][1],originalData[i][3]
+#plt.plot(coordsX, coordsY, 'o', markerfacecolor="g", markersize=5)
 plt.title('Estimated number of clusters: %d' % len(coordsX))
-plt.savefig(output_folder + "/plots/clusters_active_points.png", bbox_inches="tight")
-#print X
+plt.savefig(output_folder + "/plots/clusters_active_points" + str(datetime.now()) + ".png", bbox_inches="tight")
+
 w = make_plot("summary_active_points", X,Y,R,A,L)

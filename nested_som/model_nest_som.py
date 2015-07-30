@@ -623,8 +623,8 @@ for i in xrange(Niter):
         Map,new,neval=sample_som(i,AC,neval,minL,nt=4,nit=150,create='yes',sample='yes')
         #create=yes -> make a new som
         count = make_plot(points,AC,i)
-        print count, highestClusterCount
-        #if(count < highestClusterCount["count"]): break
+        #print count, highestClusterCount
+        if(count < highestClusterCount["count"]): break
 	
         clusterCount[l][1] = count
         clusterCount[l][0] = i

@@ -32,7 +32,7 @@ amp_max : 12
 rad_min : 1
 rad_max : 10
 #number of iterations
-niter : 28501
+niter : 36001
 #number of active points
 num_active : 10000
 #num iterations before computing new som
