@@ -34,7 +34,7 @@ rad_max : 10
 #number of iterations
 niter : 50001
 #number of active points
-num_active : 5000
+num_active : 15000
 #num iterations before computing new som
 num_som_iter : 500
 #num points for the som

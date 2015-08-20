@@ -617,10 +617,10 @@ def run(configfile):
     clusterCount = zeros(((Niter/num_som_iter)+1,2))  #list to keep the count of number of clusters after each iteration
     i = 0
     count = 0
-    niter_changed = 0
     while i < Niter:
         reject=argmin(AC[:,4])
         minL=AC[reject,4]
+        niter_changed = 0
         if i%num_som_iter == 0:
             
             Map,new,neval=sample_som(noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folder,show_plot,width,height,i,AC,neval,minL,nt=4,nit=150,create='yes',sample='yes')

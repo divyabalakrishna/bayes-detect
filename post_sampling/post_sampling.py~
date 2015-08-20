@@ -76,9 +76,8 @@ def dbscan(XX,name,x,y,a,r,l):
     length = sorted(XX[:,0])[-1] - sorted(XX[:,0])[0]
     breath = sorted(XX[:,1])[-1] - sorted(XX[:,1])[0]
     eps = 2*(sqrt(length*breath/N))
-    print "before dbscan 1"
+
     db = DBSCAN(eps=eps).fit(XX)
-    print "after fit"
     core_samples_mask = zeros_like(db.labels_, dtype=bool)
     core_samples_mask[db.core_sample_indices_] = True
     labels = db.labels_
