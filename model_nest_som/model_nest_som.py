@@ -10,6 +10,8 @@ Many things to do, and comment and fix
 This is preliminary
 """
 from numpy import *
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 #import pyfits as pf
@@ -35,10 +37,6 @@ from splitter import get_peaks, get_sources, make_source
 
 from scipy.spatial import distance
 
-highestClusterCount = {}
-highestClusterCount["count"] = 0
-highestClusterCount["iteration"] = 0
-clusters = []
 
 """
 Given our array of active points, we now try to detect sources in it.
@@ -206,8 +204,7 @@ def make_3dplot(AC,name):
 Given our sampled points (points) and active points (AC) and the iteration number (name)
 We make various plots (more detail in their titles)
 """
-def make_plot(points,AC,name):
-    global clusters
+def make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,height,points,AC,name):
     fig=plt.figure(1,figsize=(15,10), dpi=100)
     ax1=fig.add_subplot(2,3,1)  
     ax1.plot(points[:name,0],points[:name,1],'k.')
@@ -254,6 +251,7 @@ def make_plot(points,AC,name):
     
     storeClusters = False
     if(highestClusterCount["count"] <= n_clusters):
+	    #todo add prefix to filename
         savetxt(output_folder + "/active_points.txt", AC,fmt='%.6f')
         highestClusterCount["count"] = n_clusters
         highestClusterCount["iteration"] = name
@@ -354,7 +352,7 @@ def make_plot(points,AC,name):
     fig.clear()
     #all these just show various panels which were already shown earlier
    '''
-    return n_clusters
+    return n_clusters,highestClusterCount,clusters
 #make source. this is the same as image_gen's make source
 def make_source(src_array,height,width):
     x = arange(0, width)
@@ -373,7 +371,7 @@ def add_gaussian_noise(mean, sd, data):
     noised = data + my_noise
     return noised
 
-def lnlike(a,D,nlog=0):
+def lnlike(noise_lvl,amp_min,amp_max,rad_min,rad_max,xx,yy,width,height,data,a,D,nlog=0):
     X=a[0]
     Y=a[1]
     A=a[2]
@@ -404,7 +402,7 @@ def sample():
     return array([xt,yt,at,rt])
 
 
-def sample_som(jj,active,neval,LLog_min,nt=5,nit=100,create='no',sample='yes',inM=''):
+def sample_som(noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folder,show_plot,width,height,jj,active,neval,LLog_min,nt=5,nit=100,create='no',sample='yes',inM=''):
     if create=='yes':
         DD=array([active[:,0],active[:,1],active[:,2],active[:,3]]).T
         lmin=min(active[:,4])
@@ -498,185 +496,191 @@ def sample_som(jj,active,neval,LLog_min,nt=5,nit=100,create='no',sample='yes',in
 
         if keep:
             new=array([xt,yt,at,rt])
-            newL,neval=lnlike(new,data,nlog=neval)
+            newL,neval=lnlike(noise_lvl,amp_min,amp_max,rad_min,rad_max,xx,yy,width,height,data,new,data,nlog=neval)
             if newL > LLog_min: break
     return [M,new,neval]
 
-parser = SafeConfigParser()
-parser.read("../config.ini")
-#again, it would be best to replace this relative path with something better
+def run(configfile):
+    highestClusterCount = {}
+    highestClusterCount["count"] = 0
+    highestClusterCount["iteration"] = 0
+    clusters = []
+    parser = SafeConfigParser()
+    parser.read(configfile)
+    #again, it would be best to replace this relative path with something better
 
-prefix = parser.get("Misc", "prefix")
-location = parser.get("Misc", "location")
-output_folder = location + "/" + prefix 
-image_location = output_folder + "/" + prefix + "_noised.npy"
-no_noise_location = output_folder + "/" + prefix + "_clean.npy"
+    prefix = parser.get("Misc", "prefix")
+    location = parser.get("Misc", "location")
+    output_folder = location + "/" + prefix 
+    image_location = output_folder + "/" + prefix + "_noised.npy"
+    no_noise_location = output_folder + "/" + prefix + "_clean.npy"
 
-#image parameters
-width = int(parser.get("Sampling","width"))
-height = int(parser.get("Sampling","height"))
+    #image parameters
+    width = int(parser.get("Sampling","width"))
+    height = int(parser.get("Sampling","height"))
 
-#sampling parameters
-noise_lvl = float(parser.get("Sampling", "noise"))
-amp_min = float(parser.get("Sampling", "amp_min"))
-amp_max = float(parser.get("Sampling", "amp_max"))
+    #sampling parameters
+    noise_lvl = float(parser.get("Sampling", "noise"))
+    amp_min = float(parser.get("Sampling", "amp_min"))
+    amp_max = float(parser.get("Sampling", "amp_max"))
 
-rad_min = float(parser.get("Sampling", "rad_min"))
-rad_max = float(parser.get("Sampling", "rad_max"))
+    rad_min = float(parser.get("Sampling", "rad_min"))
+    rad_max = float(parser.get("Sampling", "rad_max"))
 
-niter = int(parser.get("Sampling", "niter"))
-num_active_points = int(parser.get("Sampling", "num_active"))
-num_som_iter = int(parser.get("Sampling", "num_som_iter"))
-num_som_points = int(parser.get("Sampling", "num_som_points"))
+    niter = int(parser.get("Sampling", "niter"))
+    num_active_points = int(parser.get("Sampling", "num_active"))
+    num_som_iter = int(parser.get("Sampling", "num_som_iter"))
+    num_som_points = int(parser.get("Sampling", "num_som_points"))
 
-#output parameters
-output_filename = prefix + "_" + parser.get("Output", "output_filename")
+    #output parameters
+    output_filename = prefix + "_" + parser.get("Output", "output_filename")
 
-show_plot = parser.getboolean("Output", "plot")
+    show_plot = parser.getboolean("Output", "plot")
 
-#detection parameters
-neighbor_dist = float(parser.get("Detection", "neighbor_dist"))
-cutoff = int(parser.get("Detection", "cutoff"))
-detected_processed_filename = prefix + "_processed_" + parser.get("Detection", "detected_filename")
-detected_all_filename = prefix + "_all_" + parser.get("Detection", "detected_filename")
-
-
-"""
-#legacy code
-SrcArray = [[43.71, 22.91, 10.54, 3.34],
-            [101.62, 40.60, 1.37, 3.40],
-            [92.63, 110.56, 1.81, 3.66],
-            [183.60, 85.90, 1.23, 5.06],
-            [34.12, 162.54, 1.95, 6.02],
-            [153.87, 169.18, 1.06, 6.61],
-            [155.54, 32.14, 1.46, 4.05],
-            [130.56, 183.48, 1.63, 4.11]]
-
-data_or=make_source(src_array = SrcArray,height=height, width=width)
-noise = noise_lvl
-data=add_gaussian_noise(mean=0,sd=noise,data=data_or)
-"""
-
-#more legacy code
-#filee='../bayes-detect-master/simulated_images/multinest_toy_noised'
-#s=open(filee,'r')
-#data=pickle.load(s)
-#s.close()
-
-#sys.exit(0)
-
-os.system('mkdir -p ' + output_folder + '/plots/')
-os.system('mkdir -p ' + output_folder + '/plots/detected')
-os.system('mkdir -p ' + output_folder + '/plots/6plot')
-os.system('mkdir -p ' + output_folder + '/plots/4plot')
-os.system('mkdir -p ' + output_folder + '/plots/somplot')
-os.system('mkdir -p ' + output_folder + '/plots/3dplot')
-
-data = load(image_location)
-data_or = load(no_noise_location)
+    #detection parameters
+    neighbor_dist = float(parser.get("Detection", "neighbor_dist"))
+    cutoff = int(parser.get("Detection", "cutoff"))
+    detected_processed_filename = prefix + "_processed_" + parser.get("Detection", "detected_filename")
+    detected_all_filename = prefix + "_all_" + parser.get("Detection", "detected_filename")
 
 
-#more legacy code
-#Im=pf.open('ufig_20_g_sub_500_sub_small.fits')
-#data=Im[0].data
-#Im.close()
+    """
+    #legacy code
+    SrcArray = [[43.71, 22.91, 10.54, 3.34],
+                [101.62, 40.60, 1.37, 3.40],
+                [92.63, 110.56, 1.81, 3.66],
+                [183.60, 85.90, 1.23, 5.06],
+                [34.12, 162.54, 1.95, 6.02],
+                [153.87, 169.18, 1.06, 6.61],
+                [155.54, 32.14, 1.46, 4.05],
+                [130.56, 183.48, 1.63, 4.11]]
 
-x=arange(width,dtype='float')
-y=arange(height,dtype='float')
-xx,yy=meshgrid(x,y)
+    data_or=make_source(src_array = SrcArray,height=height, width=width)
+    noise = noise_lvl
+    data=add_gaussian_noise(mean=0,sd=noise,data=data_or)
+    """
 
+    #more legacy code
+    #filee='../bayes-detect-master/simulated_images/multinest_toy_noised'
+    #s=open(filee,'r')
+    #data=pickle.load(s)
+    #s.close()
 
-start = timeit.default_timer()
-neval=0
-Np=num_active_points
-AC=zeros((Np,5))
-#initially active points is a array of 0s
+    #sys.exit(0)
 
-AC[:,0]=random.rand(Np)*(width - 1.)
-AC[:,1]=random.rand(Np)*(height - 1.)
-AC[:,2]=random.rand(Np)*(amp_max-amp_min) + amp_min
-AC[:,3]=random.rand(Np)*(rad_max-rad_min) + rad_min
-#seed the active points with uniform random numbers in the wanted range
-
-for i in xrange(Np):
-    AC[i,4],neval=lnlike(AC[i,0:4],data,nlog=neval)
-    #compute the log likelihood for each of those points
-
-
-print 'done with active'
-
-Niter=niter
-points=zeros((Niter,5))
-
-detected = zeros((1, 6)) #remember to ignore the first item
-detected_count = [-1]
-
-l = 0 #number of clusters got after each iteration index
-clusterCount = zeros(((Niter/num_som_iter)+1,2))  #list to keep the count of number of clusters after each iteration
-
-for i in xrange(Niter):
-    if i%num_som_iter == 0:
-        print i
-    reject=argmin(AC[:,4])
-    minL=AC[reject,4]
-    if i%num_som_iter == 0:
-        Map,new,neval=sample_som(i,AC,neval,minL,nt=4,nit=150,create='yes',sample='yes')
-        #create=yes -> make a new som
-        count = make_plot(points,AC,i)
-        #print count, highestClusterCount
-        if(count < highestClusterCount["count"]): 
-            Niter = highestClusterCount["iteration"]*2
-	print count, highestClusterCount,Niter
-        clusterCount[l][1] = count
-        clusterCount[l][0] = i
-        l = l+1
-        #make_3dplot(AC,i)
-        
-	#plot things with make_plot
-        #sources, detected, detected_count = detect_sources(AC, i, detected, detected_count, neighbor_dist)
-        #run detection on the active points
-        #look_at_results(sources, i)
-        #plot the detected items
-    else:
-        Map,new,neval=sample_som(i,AC,neval,minL,nt=4,nit=150,create='no',sample='yes',inM=Map)
-        #sample from the som w/o creating a new one
-#legacy code
-    #while True:
-      #  new=sample()
-#        newL,neval=lnlike(new,data,nlog=neval)
-#        if newL > minL:
-#            break
-    newL,neval=lnlike(new,data,nlog=neval)
-    points[i]=AC[reject]
-    AC[reject,0:4]=new
-    AC[reject,4]=newL
+    os.system('mkdir -p ' + output_folder + '/plots/')
+    os.system('mkdir -p ' + output_folder + '/plots/detected')
+    os.system('mkdir -p ' + output_folder + '/plots/6plot')
+    os.system('mkdir -p ' + output_folder + '/plots/4plot')
+    os.system('mkdir -p ' + output_folder + '/plots/somplot')
+    #os.system('mkdir -p ' + output_folder + '/plots/3dplot')
     
-print clusterCount
-
-#make_clusterCountPlot(clusterCount)
-
-stop = timeit.default_timer()
-
-#write some stats to a text file
-with open(output_folder + "/stats.txt", "wb") as f:
-    f.writelines(["seconds,%d\n"%(stop - start), "Log evaluations,%d"%neval])
-
-print stop - start, 'seconds'
-print neval, 'Log evaluations'
-
-#savetxt('out_points_som.txt',points,fmt='%.6f')
-savetxt(output_folder + "/" + output_filename, points,fmt='%.6f')
-
-#deal with the cutoff
-dc = array(detected_count)
-d = c_[detected, dc] #concatenate them with dc as the last column
-d = d[d[:,-1].argsort()] #sort it by detected count (the last column). this is actually not necessary
-above_cutoff = where(d[:,-1] >= cutoff)[0]
-filtered_detected = d[above_cutoff]
+    data = load(image_location)
+    data_or = load(no_noise_location)
 
 
-header = "x,y,a,r,L,detection_count"
-savetxt(output_folder + "/" + detected_processed_filename, filtered_detected, fmt="%.6f", delimiter=",",header=header) 
-print "wrote to file: " + output_folder + "/" + detected_processed_filename
-savetxt(output_folder + "/" + detected_all_filename, d, fmt="%.6f", delimiter=",",header=header) 
-print "wrote to file: " + output_folder + "/" + detected_all_filename
+    #more legacy code
+    #Im=pf.open('ufig_20_g_sub_500_sub_small.fits')
+    #data=Im[0].data
+    #Im.close()
+
+    x=arange(width,dtype='float')
+    y=arange(height,dtype='float')
+    xx,yy=meshgrid(x,y)
+
+
+    start = timeit.default_timer()
+    neval=0
+    Np=num_active_points
+    AC=zeros((Np,5))
+    #initially active points is a array of 0s
+
+    AC[:,0]=random.rand(Np)*(width - 1.)
+    AC[:,1]=random.rand(Np)*(height - 1.)
+    AC[:,2]=random.rand(Np)*(amp_max-amp_min) + amp_min
+    AC[:,3]=random.rand(Np)*(rad_max-rad_min) + rad_min
+    #seed the active points with uniform random numbers in the wanted range
+
+    for i in xrange(Np):
+        AC[i,4],neval=lnlike(noise_lvl,amp_min,amp_max,rad_min,rad_max,xx,yy,width,height,data,AC[i,0:4],data,nlog=neval)
+        #compute the log likelihood for each of those points
+
+
+    print 'done with active'
+
+    Niter=niter
+    points=zeros((Niter,5))
+
+    detected = zeros((1, 6)) #remember to ignore the first item
+    detected_count = [-1]
+
+    l = 0 #number of clusters got after each iteration index
+    clusterCount = zeros(((Niter/num_som_iter)+1,2))  #list to keep the count of number of clusters after each iteration
+    i = 0
+    while i < Niter:
+        if i%num_som_iter == 0:
+            print i
+        reject=argmin(AC[:,4])
+        minL=AC[reject,4]
+        if i%num_som_iter == 0:
+            Map,new,neval=sample_som(noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folder,show_plot,width,height,i,AC,neval,minL,nt=4,nit=150,create='yes',sample='yes')
+            #create=yes -> make a new som
+            count,highestClusterCount,clusters = make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,height,points,AC,i)
+            #print count, highestClusterCount
+            clusterCount[l][1] = count
+            clusterCount[l][0] = i
+            l = l+1
+            #make_3dplot(AC,i)
+
+        #plot things with make_plot
+            #sources, detected, detected_count = detect_sources(AC, i, detected, detected_count, neighbor_dist)
+            #run detection on the active points
+            #look_at_results(sources, i)
+            #plot the detected items
+        else:
+            Map,new,neval=sample_som(noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folder,show_plot,width,height,i,AC,neval,minL,nt=4,nit=150,create='no',sample='yes',inM=Map)
+        if(count < highestClusterCount["count"]): 
+                Niter = highestClusterCount["iteration"]*2
+                break
+            #sample from the som w/o creating a new one
+    #legacy code
+        #while True:
+          #  new=sample()
+    #        newL,neval=lnlike(new,data,nlog=neval)
+    #        if newL > minL:
+    #            break
+        newL,neval=lnlike(noise_lvl,amp_min,amp_max,rad_min,rad_max,xx,yy,width,height,data,new,data,nlog=neval)
+        points[i]=AC[reject]
+        AC[reject,0:4]=new
+        AC[reject,4]=newL
+        i = i+1
+
+    print clusterCount
+
+    #make_clusterCountPlot(clusterCount)
+
+    stop = timeit.default_timer()
+
+    #write some stats to a text file
+    with open(output_folder + "/stats.txt", "wb") as f:
+        f.writelines(["seconds,%d\n"%(stop - start), "Log evaluations,%d"%neval])
+
+    print stop - start, 'seconds'
+    print neval, 'Log evaluations'
+
+    #savetxt('out_points_som.txt',points,fmt='%.6f')
+    savetxt(output_folder + "/" + output_filename, points,fmt='%.6f')
+
+    #deal with the cutoff
+    dc = array(detected_count)
+    d = c_[detected, dc] #concatenate them with dc as the last column
+    d = d[d[:,-1].argsort()] #sort it by detected count (the last column). this is actually not necessary
+    above_cutoff = where(d[:,-1] >= cutoff)[0]
+    filtered_detected = d[above_cutoff]
+
+
+    header = "x,y,a,r,L,detection_count"
+    savetxt(output_folder + "/" + detected_processed_filename, filtered_detected, fmt="%.6f", delimiter=",",header=header) 
+    print "wrote to file: " + output_folder + "/" + detected_processed_filename
+    savetxt(output_folder + "/" + detected_all_filename, d, fmt="%.6f", delimiter=",",header=header) 
+    print "wrote to file: " + output_folder + "/" + detected_all_filename

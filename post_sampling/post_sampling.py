@@ -3,6 +3,8 @@ import copy
 from copy import deepcopy
 import scipy
 import os,sys
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.cluster import DBSCAN
@@ -19,37 +21,8 @@ import seaborn as sns #makes the plots look pretty
 
 from common import *
 
-try:
-    os.mkdir('plots')
-except:
-    pass
 
-parser = SafeConfigParser()
-parser.read("../config.ini")
-
-width = int(parser.get("Sampling", "width"))
-height = int(parser.get("Sampling", "height"))
-
-amp_min = float(parser.get("Sampling", "amp_min"))
-amp_max = float(parser.get("Sampling", "amp_max"))
-
-rad_min = float(parser.get("Sampling", "rad_min"))
-rad_max = float(parser.get("Sampling", "rad_max"))
-
-prefix = parser.get("Misc", "prefix")
-location = parser.get("Misc", "location")
-output_folder = location + "/" + prefix 
-
-x,y,r,a,l = loadtxt(output_folder + "/active_points.txt", unpack=True)
-x_p,y_p,r_p,a_p,l_p = loadtxt(output_folder + "/0_out_points_som.txt", unpack=True)
-
-X = []
-Y = []
-L = []
-R = []
-A = []
-
-def filterNoise(XX,YY):
+def filterNoise(XX,YY,x,y,a,r,l):
     X = copy.deepcopy(x)
     Y = copy.deepcopy(y)
     R = copy.deepcopy(r)
@@ -62,9 +35,9 @@ def filterNoise(XX,YY):
         R = delete(R,index)
         A = delete(A,index)
         L = delete(L,index)
-    return X,Y,R,A,L
+    return X,Y,A,R,L
 
-def filterCluster(XX,YY):
+def filterCluster(XX,YY,x,y,a,r,l,output_folder):
     X = copy.deepcopy(x)
     Y = copy.deepcopy(y)
     R = copy.deepcopy(r)
@@ -90,11 +63,15 @@ def filterCluster(XX,YY):
     temp[:,4] = ll
     savetxt(output_folder + "/cluster.txt", temp,fmt='%.6f')
     X,Y,R,A,L = loadtxt(output_folder + "/cluster.txt", unpack=True)
-    return X,Y,R,A,L
+    return X,Y,A,R,L
 
-def dbscan(XX,name):
+def dbscan(XX,name,x,y,a,r,l):
     #DBSCAN
-    global X,Y,R,A,L
+    X = []
+    Y = []
+    L = []
+    R = []
+    A = []
     N = len(XX[:,0])
     length = sorted(XX[:,0])[-1] - sorted(XX[:,0])[0]
     breath = sorted(XX[:,1])[-1] - sorted(XX[:,1])[0]
@@ -120,13 +97,13 @@ def dbscan(XX,name):
         if k == -1:
             # Black used for noise.
             col = 'k'
-            X,Y,R,A,L = filterNoise(xy[:,0],xy[:,1])
+            X,Y,A,R,L = filterNoise(xy[:,0],xy[:,1],x,y,a,r,l)
             continue
         plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col,markeredgecolor='k', markersize=0.1)
         mx = mean(xy[:,0])
         my = mean(xy[:,1])
         centers.append([mx,my])
-    return clusters,plt,centers
+    return clusters,plt,centers,X,Y,A,R,L
 
 def random_color():
     return plt.cm.gist_ncar(random.random())
@@ -147,7 +124,7 @@ def plot_segments(ax, locs, vals, min_vals, max_vals):
         ax.plot(locs[mask], vals[mask], color=random_color())
         #color is chosen randomly, so sometimes it makes a bad selection
 
-def make_plot(filename, x, y, r, a, l):
+def make_plot(filename, x, y, r, a, l, width, height, prefix, output_folder):
     #first plot of parameter vs L
     print "1"
     fig=plt.figure(figsize=(10,8))
@@ -197,7 +174,7 @@ def make_plot(filename, x, y, r, a, l):
    
     print "4"
     ax5 = fig.add_subplot(2,2,2)
-    data = load(output_folder + "/0_clean.npy")
+    data = load(output_folder + "/" + prefix + "_clean.npy")
     ax5.imshow(flipud(data),extent=[0,width,0,height])
     ax5.set_title('Original image ')
 
@@ -209,7 +186,7 @@ def make_plot(filename, x, y, r, a, l):
     fig= plt.figure()
 
     proj = fig.add_subplot(111, projection='3d')
-    proj.scatter(x[w],y[w],L[w],s=3,marker='.')
+    proj.scatter(x[w],y[w],l[w],s=3,marker='.')
     proj.set_xlim(0,width)
     proj.set_ylim(0,height)
     proj.set_xlabel('X')
@@ -245,63 +222,91 @@ def calculateRadius(X,C):
     r = sqrt(r/len(X))
     return r 
 
-XX=zeros((len(x),2))
-XX[:,0]=x
-XX[:,1]=y
-clusters,plt,c = dbscan(XX,"clusters_active_points")
+def run(configfile):
+    try:
+        os.mkdir('plots')
+    except:
+        pass
 
-coordsX = []
-coordsY = []
-coordsR = []
-coordsA = []
-coordsL = []
-for i in range(len(clusters)):
-    x1,y1,r1,a1,l1 = filterCluster(clusters[i][:,0],clusters[i][:,1]) 
-    XX=zeros((len(x1),2))
-    XX[:,0]=x1
-    XX[:,1]=y1
-    w, xmask, xm, Lmx = binned_max(x1, l1, 0, width, 600)
-    smoothed_x = smooth(Lmx[xmask])
-    maxes = compute_maxes(xm[xmask], smoothed_x)
-    maxX = len(maxes)
-    w, ymask, ym, Lmy = binned_max(y1, l1, 0, height, 600)
-    smoothed_y = smooth(Lmy[ymask])
-    maxes = compute_maxes(ym[ymask], smoothed_y)
-    maxY = len(maxes)
-    m = maxY
-    if maxX > maxY:
-        m = maxX
-    if m != 0:
-        centers,kmeans_clusters = k_means(XX,m)
-        colors = plt.cm.Spectral(np.linspace(0, 1, len(clusters)))
-        for i, col in zip(range(len(centers)), colors):
-            coordsX.append(centers[i][0])
-            coordsY.append(centers[i][1])
-            #plt.plot(kmeans_clusters[i][:,0],kmeans_clusters[i][:,1], 'o', markerfacecolor=col, markersize=5)
-            
-            coordsR.append(calculateRadius(kmeans_clusters[i],centers[i]))
+    parser = SafeConfigParser()
+    parser.read(configfile)
 
-    else:
-        coordsX.append(c[i][0])
-        coordsY.append(c[i][1])
-        coordsR.append(calculateRadius(XX,c[i]))
+    width = int(parser.get("Sampling", "width"))
+    height = int(parser.get("Sampling", "height"))
 
-for i in range(len(coordsX)):
-    circle =  plt.Circle((coordsX[i],coordsY[i]),coordsR[i],edgecolor = 'r',facecolor='none')
-    fig = plt.gcf()
-    fig.gca().add_artist(circle)
-    print coordsX[i],coordsY[i],coordsR[i]
+    amp_min = float(parser.get("Sampling", "amp_min"))
+    amp_max = float(parser.get("Sampling", "amp_max"))
 
-originalData = np.load(output_folder +"/0_srcs.npy")
+    rad_min = float(parser.get("Sampling", "rad_min"))
+    rad_max = float(parser.get("Sampling", "rad_max"))
 
-for i in range(len(originalData)):
-    circle =  plt.Circle((originalData[i][0],originalData[i][1]),originalData[i][3],edgecolor = 'k',facecolor='none')
-    fig = plt.gcf()
-    fig.gca().add_artist(circle)
-    print originalData[i][0],originalData[i][1],originalData[i][3]
-plt.plot(coordsX, coordsY, 'o', markerfacecolor="r", markersize=2)
-plt.plot(originalData[:,0], originalData[:,1], 'o', markerfacecolor="r", markersize=2)
-plt.title('Estimated number of clusters: %d' % len(coordsX))
-plt.savefig(output_folder + "/plots/clusters_active_points" + str(datetime.now()) + ".png", bbox_inches="tight")
+    prefix = parser.get("Misc", "prefix")
+    location = parser.get("Misc", "location")
+    output_folder = location + "/" + prefix 
+    
+    #output parameters
+    output_filename = prefix + "_" + parser.get("Output", "output_filename")
+    
+    x,y,a,r,l = loadtxt(output_folder + "/active_points.txt", unpack=True)
+    x_p,y_p,a_p,r_p,l_p = loadtxt(output_folder + "/" + output_filename, unpack=True)
 
-w = make_plot("summary_active_points", X,Y,R,A,L)
+    XX=zeros((len(x),2))
+    XX[:,0]=x
+    XX[:,1]=y
+    clusters,plt,c,X,Y,A,R,L = dbscan(XX,"clusters_active_points",x,y,a,r,l)
+
+    coordsX = []
+    coordsY = []
+    coordsR = []
+    coordsA = []
+    coordsL = []
+    for i in range(len(clusters)):
+        x1,y1,a1,r1,l1 = filterCluster(clusters[i][:,0],clusters[i][:,1],x,y,a,r,l,output_folder) 
+        XX=zeros((len(x1),2))
+        XX[:,0]=x1
+        XX[:,1]=y1
+        w, xmask, xm, Lmx = binned_max(x1, l1, 0, width, 600)
+        smoothed_x = smooth(Lmx[xmask])
+        maxes = compute_maxes(xm[xmask], smoothed_x)
+        maxX = len(maxes)
+        w, ymask, ym, Lmy = binned_max(y1, l1, 0, height, 600)
+        smoothed_y = smooth(Lmy[ymask])
+        maxes = compute_maxes(ym[ymask], smoothed_y)
+        maxY = len(maxes)
+        m = maxY
+        if maxX > maxY:
+            m = maxX
+        if m != 0:
+            centers,kmeans_clusters = k_means(XX,m)
+            colors = plt.cm.Spectral(np.linspace(0, 1, len(clusters)))
+            for i, col in zip(range(len(centers)), colors):
+                coordsX.append(centers[i][0])
+                coordsY.append(centers[i][1])
+                #plt.plot(kmeans_clusters[i][:,0],kmeans_clusters[i][:,1], 'o', markerfacecolor=col, markersize=5)
+
+                coordsR.append(calculateRadius(kmeans_clusters[i],centers[i]))
+
+        else:
+            coordsX.append(c[i][0])
+            coordsY.append(c[i][1])
+            coordsR.append(calculateRadius(XX,c[i]))
+
+    for i in range(len(coordsX)):
+        circle =  plt.Circle((coordsX[i],coordsY[i]),coordsR[i],edgecolor = 'r',facecolor='none')
+        fig = plt.gcf()
+        fig.gca().add_artist(circle)
+        print coordsX[i],coordsY[i],coordsR[i]
+
+    originalData = np.load(output_folder +"/" + prefix + "_srcs.npy")
+
+    for i in range(len(originalData)):
+        circle =  plt.Circle((originalData[i][0],originalData[i][1]),originalData[i][3],edgecolor = 'k',facecolor='none')
+        fig = plt.gcf()
+        fig.gca().add_artist(circle)
+        print originalData[i][0],originalData[i][1],originalData[i][3]
+    plt.plot(coordsX, coordsY, 'o', markerfacecolor="r", markersize=2)
+    plt.plot(originalData[:,0], originalData[:,1], 'o', markerfacecolor="k", markersize=2)
+    plt.title('Estimated number of clusters: %d' % len(coordsX))
+    plt.savefig(output_folder + "/plots/clusters_active_points.png", bbox_inches="tight")
+
+    w = make_plot("summary_active_points", X,Y,R,A,L,width,height,prefix,output_folder)
