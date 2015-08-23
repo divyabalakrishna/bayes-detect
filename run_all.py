@@ -45,7 +45,7 @@ F.close()
 
 #ig.run(fileout)
 
-ns.run(fileout)
+#ns.run(fileout)
 
 ps.run(fileout)
 

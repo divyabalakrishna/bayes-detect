@@ -204,7 +204,7 @@ def make_3dplot(AC,name):
 Given our sampled points (points) and active points (AC) and the iteration number (name)
 We make various plots (more detail in their titles)
 """
-def make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,height,points,AC,name):
+def make_plot(niter_changed,data,data_or,output_folder,highestClusterCount,clusters,width,height,points,AC,name):
     fig=plt.figure(1,figsize=(15,10), dpi=100)
     ax1=fig.add_subplot(2,3,1)  
     ax1.plot(points[:name,0],points[:name,1],'k.')
@@ -250,8 +250,9 @@ def make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,heig
     ax3=fig.add_subplot(2,3,2)
     
     storeClusters = False
-    if(highestClusterCount["count"] < n_clusters):
+    if(highestClusterCount["count"] < n_clusters and niter_changed == 0):
 	    #todo add prefix to filename
+        print "writing active_points.txt"
         savetxt(output_folder + "/active_points.txt", AC,fmt='%.6f')
         highestClusterCount["count"] = n_clusters
         highestClusterCount["iteration"] = name
@@ -625,7 +626,7 @@ def run(configfile):
             
             Map,new,neval=sample_som(noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folder,show_plot,width,height,i,AC,neval,minL,nt=4,nit=150,create='yes',sample='yes')
             #create=yes -> make a new som
-            count,highestClusterCount,clusters = make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,height,points,AC,i)
+            count,highestClusterCount,clusters = make_plot(niter_changed,data,data_or,output_folder,highestClusterCount,clusters,width,height,points,AC,i)
             #print count, highestClusterCount
             clusterCount[l][1] = count
             clusterCount[l][0] = i
@@ -635,6 +636,7 @@ def run(configfile):
                 Niter = (highestClusterCount["iteration"]*2)+1
                 niter_changed = 1
                 print "changing niter",i
+                break
 
         else:
             Map,new,neval=sample_som(noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folder,show_plot,width,height,i,AC,neval,minL,nt=4,nit=150,create='no',sample='yes',inM=Map)

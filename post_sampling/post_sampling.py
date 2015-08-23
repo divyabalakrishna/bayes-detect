@@ -100,7 +100,7 @@ def dbscan(XX,name,x,y,a,r,l):
             col = 'k'
             X,Y,A,R,L = filterNoise(xy[:,0],xy[:,1],x,y,a,r,l)
             continue
-        plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col,markeredgecolor='k', markersize=2)
+        plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col,markeredgecolor='k', markersize=0.01)
         mx = mean(xy[:,0])
         my = mean(xy[:,1])
         centers.append([mx,my])
