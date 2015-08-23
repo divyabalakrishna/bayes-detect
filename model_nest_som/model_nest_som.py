@@ -250,7 +250,7 @@ def make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,heig
     ax3=fig.add_subplot(2,3,2)
     
     storeClusters = False
-    if(highestClusterCount["count"] <= n_clusters):
+    if(highestClusterCount["count"] < n_clusters):
 	    #todo add prefix to filename
         savetxt(output_folder + "/active_points.txt", AC,fmt='%.6f')
         highestClusterCount["count"] = n_clusters

@@ -16,6 +16,7 @@ from ConfigParser import SafeConfigParser
 from itertools import cycle
 from scipy.signal import argrelextrema
 from datetime import *
+from math import *
 
 import seaborn as sns #makes the plots look pretty
 
@@ -76,9 +77,8 @@ def dbscan(XX,name,x,y,a,r,l):
     length = sorted(XX[:,0])[-1] - sorted(XX[:,0])[0]
     breath = sorted(XX[:,1])[-1] - sorted(XX[:,1])[0]
     eps = 2*(sqrt(length*breath/N))
-    print "before dbscan 1"
     db = DBSCAN(eps=eps).fit(XX)
-    print "after fit"
+    
     core_samples_mask = zeros_like(db.labels_, dtype=bool)
     core_samples_mask[db.core_sample_indices_] = True
     labels = db.labels_
@@ -100,7 +100,7 @@ def dbscan(XX,name,x,y,a,r,l):
             col = 'k'
             X,Y,A,R,L = filterNoise(xy[:,0],xy[:,1],x,y,a,r,l)
             continue
-        plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col,markeredgecolor='k', markersize=0.1)
+        plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col,markeredgecolor='k', markersize=2)
         mx = mean(xy[:,0])
         my = mean(xy[:,1])
         centers.append([mx,my])
@@ -216,12 +216,28 @@ def k_means(X, n_clusters):
         clusters.append(temp)
     return k_means_cluster_centers,clusters
 
-def calculateRadius(X,C):
-    r = 0
-    for i in range(len(X)):
-        r += pow((X[i][0]-C[0]),2) + pow((X[i][1]-C[1]),2)
-    r = sqrt(r/len(X))
-    return r 
+def calculateRadius(x1,y1,a1,r1,l1):
+    n = int(math.ceil((len(l1)*0.1)))
+    temp = zeros((n,5))
+    for i in range(n):
+        m = l1[0]
+        index = 0
+        j = 0
+        while j < len(l1):
+            if(l1[j] > m):
+                m = l1[j]
+                index = j
+                l1=delete(l1, j, 0)
+            j = j+1
+        temp[i][0] = x1[index]
+        temp[i][1] = y1[index]
+        temp[i][2] = a1[index]
+        temp[i][3] = r1[index]
+        temp[i][4] = m
+    r = mean(temp[:,3])
+    x = mean(temp[:,0])
+    y = mean(temp[:,1])
+    return r,x,y
 
 def run(configfile):
     try:
@@ -248,16 +264,13 @@ def run(configfile):
     #output parameters
     output_filename = prefix + "_" + parser.get("Output", "output_filename")
     
-    #x,y,a,r,l = loadtxt(output_folder + "/active_points.txt", unpack=True)
-    x,y,a,r,l = loadtxt(output_folder + "/" + output_filename, unpack=True)
+    x,y,a,r,l = loadtxt(output_folder + "/active_points.txt", unpack=True)
+    #x,y,a,r,l = loadtxt(output_folder + "/" + output_filename, unpack=True)
 
     XX=zeros((len(x),2))
     XX[:,0]=x
     XX[:,1]=y
-    print "before dbscan"
     clusters,plt,c,X,Y,A,R,L = dbscan(XX,"clusters_active_points",x,y,a,r,l)
-
-    print "after dbscan",len(clusters)
     coordsX = []
     coordsY = []
     coordsR = []
@@ -283,16 +296,19 @@ def run(configfile):
             centers,kmeans_clusters = k_means(XX,m)
             colors = plt.cm.Spectral(np.linspace(0, 1, len(clusters)))
             for i, col in zip(range(len(centers)), colors):
+                x2,y2,a2,r2,l2 = filterCluster(kmeans_clusters[i][:,0],kmeans_clusters[i][:,1],x,y,a,r,l,output_folder)
                 coordsX.append(centers[i][0])
                 coordsY.append(centers[i][1])
                 #plt.plot(kmeans_clusters[i][:,0],kmeans_clusters[i][:,1], 'o', markerfacecolor=col, markersize=5)
-
-                coordsR.append(calculateRadius(kmeans_clusters[i],centers[i]))
+                radius,xvalue,yvalue = calculateRadius(x1,y1,a1,r1,l1)
+                coordsR.append(radius)
 
         else:
-            coordsX.append(c[i][0])
-            coordsY.append(c[i][1])
-            coordsR.append(calculateRadius(XX,c[i]))
+            radius,xvalue,yvalue = calculateRadius(x1,y1,a1,r1,l1)
+            coordsX.append(xvalue)
+            coordsY.append(yvalue)
+            coordsR.append(radius)
+            
 
     for i in range(len(coordsX)):
         circle =  plt.Circle((coordsX[i],coordsY[i]),coordsR[i],edgecolor = 'r',facecolor='none')
