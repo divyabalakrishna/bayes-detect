@@ -24,8 +24,7 @@ def run(configfile):
 
     prefix = parser.get("Misc", "prefix")
     output_dir = parser.get("Misc", "location") + "/" + prefix
-    print output_dir
-    os.system('mkdir -p ' + output_dir)
+    
 
     #make a src array [[x,y,a,r], ...]
     src_array = np.zeros((num_sources, 4))

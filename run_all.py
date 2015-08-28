@@ -13,44 +13,51 @@ import post_sampling.post_sampling as ps
 import timeit
 
 
-start = timeit.default_timer()
+'''num_runs = 3
+for i in range(num_runs):
+    # In[2]:
 
-newprefix = 3
+    start = timeit.default_timer()
+    newprefix = i
 
-#read config.ini template
-parser = SafeConfigParser()
-parser.read("config.ini")
 
-#image parameters
-width = int(parser.get("Image","width"))
-height = int(parser.get("Image","height"))
-noise_lvl = float(parser.get("Image", "noise"))
-amp_min = float(parser.get("Image", "amp_min"))
-amp_max = float(parser.get("Image", "amp_max"))
+    # In[5]:
 
-rad_min = float(parser.get("Image", "rad_min"))
-rad_max = float(parser.get("Image", "rad_max"))
-num_sources = int(parser.get("Image", "num_items"))
-noise = float(parser.get("Image", "noise"))
+    #read config.ini template
+    parser = SafeConfigParser()
+    #todo: do something about not using the relative path
+    parser.read("config.ini")
 
-prefix = parser.get("Misc", "prefix")
-output_dir = parser.get("Misc", "location") + "/" + prefix
+    prefix = newprefix
+    output_dir = parser.get("Misc", "location") + "/" + str(prefix)
+    os.system('mkdir -p ' + output_dir)
 
-#change prefix and write
-parser.set("Misc","prefix",str(newprefix))
-fileout='config'+'_'+str(newprefix)+'.ini'
-F=open(fileout,'w')
-parser.write(F)
-F.close()
 
-#ig.run(fileout)
+    # In[6]:
 
-#ns.run(fileout)
+    #change prefix and write
+    parser.set("Misc","prefix",str(newprefix))
+    fileout="files"+"/"+str(newprefix)+"/"+'config'+'_'+str(newprefix)+'.ini'
+    #fileout='config'+'_'+str(newprefix)+'.ini'
+    F=open(fileout,'w')
+    parser.write(F)
+    F.close()
 
+
+    # In[15]:
+    ig.run(fileout)
+
+    # In[6]:
+    ns.run(fileout)
+
+    # In[7]:
+    ps.run(fileout)
+
+    # In[8]:
+    stop = timeit.default_timer()
+    print stop - start, 'seconds'
+'''
+fileout="files/2/config_2.ini"
 ps.run(fileout)
-
-stop = timeit.default_timer()
-print stop - start, 'seconds'
-
 
 

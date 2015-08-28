@@ -85,7 +85,7 @@ def dbscan(XX,name,x,y,a,r,l):
 
 
     n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
-    print n_clusters_
+    
     unique_labels = set(labels)
     colors = plt.cm.jet(linspace(0, 1, len(unique_labels)))
     clusters = [XX[labels == i] for i in xrange(n_clusters_)]
@@ -115,7 +115,7 @@ def plot_segments(ax, locs, vals, min_vals, max_vals):
     where a segment should contain one peak
     """
     intervals = compute_intervals(min_vals, max_vals)
-    intervals = floor(intervals).astype("int")
+    intervals = intervals.astype("int")
     for x,y in intervals:
         if(x == y):
             x = 0
@@ -314,7 +314,7 @@ def run(configfile):
         circle =  plt.Circle((coordsX[i],coordsY[i]),coordsR[i],edgecolor = 'r',facecolor='none')
         fig = plt.gcf()
         fig.gca().add_artist(circle)
-        print coordsX[i],coordsY[i],coordsR[i]
+        #print coordsX[i],coordsY[i],coordsR[i]
 
     originalData = np.load(output_folder +"/" + prefix + "_srcs.npy")
 
@@ -322,7 +322,7 @@ def run(configfile):
         circle =  plt.Circle((originalData[i][0],originalData[i][1]),originalData[i][3],edgecolor = 'k',facecolor='none')
         fig = plt.gcf()
         fig.gca().add_artist(circle)
-        print originalData[i][0],originalData[i][1],originalData[i][3]
+        #print originalData[i][0],originalData[i][1],originalData[i][3]
     plt.plot(coordsX, coordsY, 'o', markerfacecolor="r", markersize=2)
     plt.plot(originalData[:,0], originalData[:,1], 'o', markerfacecolor="k", markersize=2)
     plt.title('Estimated number of clusters: %d' % len(coordsX))

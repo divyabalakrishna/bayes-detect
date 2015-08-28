@@ -180,31 +180,10 @@ def make_clusterCountPlot(clusterCount):
 
 
 """
-Given active points (AC) and the iteration number (name)
-3d plots are drawn with parameters (x,y) vs L
-"""
-def make_3dplot(AC,name):
-    #plot of 3d parameters (x,y) vs L
-    fig= plt.figure()
-
-    proj = fig.add_subplot(111, projection='3d')
-    proj.scatter(AC[:,0],AC[:,1],AC[:,4],s=3,marker='.')
-    proj.set_xlim(0,width)
-    proj.set_ylim(0,height)
-    proj.set_xlabel('X')
-    proj.set_ylabel('Y')
-    proj.set_zlabel('Likelihood')
-    
-    
-    fname="%05d" % name
-
-    fig.savefig(output_folder + '/plots/3dplot/'+fname+'.png',bbox_inches='tight')
-
-"""
 Given our sampled points (points) and active points (AC) and the iteration number (name)
 We make various plots (more detail in their titles)
 """
-def make_plot(niter_changed,data,data_or,output_folder,highestClusterCount,clusters,width,height,points,AC,name):
+def make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,height,points,AC,name):
     fig=plt.figure(1,figsize=(15,10), dpi=100)
     ax1=fig.add_subplot(2,3,1)  
     ax1.plot(points[:name,0],points[:name,1],'k.')
@@ -233,8 +212,10 @@ def make_plot(niter_changed,data,data_or,output_folder,highestClusterCount,clust
     XX[:,1]=AC[:,1]
     XX = StandardScaler().fit_transform(XX)
  
+    length = sorted(XX[:,0])[-1] - sorted(XX[:,0])[0]
+    breath = sorted(XX[:,1])[-1] - sorted(XX[:,1])[0]
     N = len(XX[:,0])
-    eps = 2*(200/sqrt(N))
+    eps = 2*(sqrt(length*breath/N))
     db = DBSCAN().fit(XX)
 
     core_samples_mask = zeros_like(db.labels_, dtype=bool)
@@ -250,9 +231,7 @@ def make_plot(niter_changed,data,data_or,output_folder,highestClusterCount,clust
     ax3=fig.add_subplot(2,3,2)
     
     storeClusters = False
-    if(highestClusterCount["count"] < n_clusters and niter_changed == 0):
-	    #todo add prefix to filename
-        print "writing active_points.txt"
+    if(highestClusterCount["count"] <= n_clusters):
         savetxt(output_folder + "/active_points.txt", AC,fmt='%.6f')
         highestClusterCount["count"] = n_clusters
         highestClusterCount["iteration"] = name
@@ -618,7 +597,6 @@ def run(configfile):
     clusterCount = zeros(((Niter/num_som_iter)+1,2))  #list to keep the count of number of clusters after each iteration
     i = 0
     count = 0
-    niter_changed = 0
     while i < Niter:
         reject=argmin(AC[:,4])
         minL=AC[reject,4]
@@ -626,16 +604,14 @@ def run(configfile):
             
             Map,new,neval=sample_som(noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folder,show_plot,width,height,i,AC,neval,minL,nt=4,nit=150,create='yes',sample='yes')
             #create=yes -> make a new som
-            count,highestClusterCount,clusters = make_plot(niter_changed,data,data_or,output_folder,highestClusterCount,clusters,width,height,points,AC,i)
+            count,highestClusterCount,clusters = make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,height,points,AC,i)
             #print count, highestClusterCount
             clusterCount[l][1] = count
             clusterCount[l][0] = i
             l = l+1
             print i,Niter,count,highestClusterCount["count"]
-            if(count < highestClusterCount["count"] and niter_changed == 0): 
+            if(count < highestClusterCount["count"]): 
                 Niter = (highestClusterCount["iteration"]*2)+1
-                niter_changed = 1
-                print "changing niter",i
                 break
 
         else:
@@ -654,8 +630,6 @@ def run(configfile):
         AC[reject,0:4]=new
         AC[reject,4]=newL
         i = i+1
-
-    print clusterCount
 
     #make_clusterCountPlot(clusterCount)
 
