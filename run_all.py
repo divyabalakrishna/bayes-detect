@@ -13,7 +13,7 @@ import post_sampling.post_sampling as ps
 import timeit
 
 
-'''num_runs = 3
+num_runs = 3
 for i in range(num_runs):
     # In[2]:
 
@@ -56,7 +56,7 @@ for i in range(num_runs):
     # In[8]:
     stop = timeit.default_timer()
     print stop - start, 'seconds'
-'''
+
 fileout="files/2/config_2.ini"
 ps.run(fileout)
 
