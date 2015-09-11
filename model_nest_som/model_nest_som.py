@@ -230,14 +230,6 @@ def make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,heig
 
     ax3=fig.add_subplot(2,3,2)
     
-    storeClusters = False
-    if(highestClusterCount["count"] <= n_clusters):
-        savetxt(output_folder + "/active_points.txt", AC,fmt='%.6f')
-        highestClusterCount["count"] = n_clusters
-        highestClusterCount["iteration"] = name
-        storeClusters = True
-        clusters = []
-
     for k, col in zip(unique_labels, colors):
         if k == -1:
             # Black used for noise.
@@ -248,9 +240,6 @@ def make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,heig
         xy = XX[class_member_mask]
         ax3.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col,
              markeredgecolor='k', markersize=5)
-        
-        if(storeClusters and k != -1):
-            clusters.append(xy)
     
     ax3.set_title('Estimated number of clusters: %d' % n_clusters)
 
@@ -332,7 +321,7 @@ def make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,heig
     fig.clear()
     #all these just show various panels which were already shown earlier
    '''
-    return n_clusters,highestClusterCount,clusters
+    return n_clusters,highestClusterCount
 #make source. this is the same as image_gen's make source
 def make_source(src_array,height,width):
     x = arange(0, width)
@@ -359,7 +348,7 @@ def lnlike(noise_lvl,amp_min,amp_max,rad_min,rad_max,xx,yy,width,height,data,a,D
     noise=abs(noise_lvl)
 
     if X < 0 or X > width: return [-inf, nlog]
-    if Y < 0 or Y > width: return [-inf, nlog]
+    if Y < 0 or Y > height: return [-inf, nlog]
     if A < amp_min or A > amp_max: return [-inf, nlog]
     if R < rad_min or R > rad_max: return [-inf, nlog]
     #if any of them are out of the range, we return -inf (log(0)) and the same number of log evaluations
@@ -555,7 +544,10 @@ def run(configfile):
     os.system('mkdir -p ' + output_folder + '/plots/somplot')
     #os.system('mkdir -p ' + output_folder + '/plots/3dplot')
     
+    #noised data
     data = load(image_location)
+    
+    #clean data
     data_or = load(no_noise_location)
 
 
@@ -597,6 +589,7 @@ def run(configfile):
     clusterCount = zeros(((Niter/num_som_iter)+1,2))  #list to keep the count of number of clusters after each iteration
     i = 0
     count = 0
+    clustersPlateau = []
     while i < Niter:
         reject=argmin(AC[:,4])
         minL=AC[reject,4]
@@ -604,16 +597,25 @@ def run(configfile):
             
             Map,new,neval=sample_som(noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folder,show_plot,width,height,i,AC,neval,minL,nt=4,nit=150,create='yes',sample='yes')
             #create=yes -> make a new som
-            count,highestClusterCount,clusters = make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,height,points,AC,i)
+            n_clusters,highestClusterCount = make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,height,points,AC,i)
             #print count, highestClusterCount
-            clusterCount[l][1] = count
+            clusterCount[l][1] = n_clusters
             clusterCount[l][0] = i
             l = l+1
-            print i,Niter,count,highestClusterCount["count"]
-            if(count < highestClusterCount["count"]): 
+            print i,n_clusters, highestClusterCount["count"]
+            if(n_clusters > highestClusterCount["count"]):
+                clustersPlateau = []
+                print "greater"
+                highestClusterCount["count"] = n_clusters
+                highestClusterCount["iteration"] = i
+            elif(n_clusters == highestClusterCount["count"]):
+                print "equal"
+                clustersPlateau.append(AC)
+                highestClusterCount["count"] = n_clusters
+                highestClusterCount["iteration"] = i
+            elif(n_clusters < highestClusterCount["count"]): 
                 Niter = (highestClusterCount["iteration"]*2)+1
                 break
-
         else:
             Map,new,neval=sample_som(noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folder,show_plot,width,height,i,AC,neval,minL,nt=4,nit=150,create='no',sample='yes',inM=Map)
         
@@ -636,8 +638,12 @@ def run(configfile):
     #write some stats to a text file
     #with open(output_folder + "/stats.txt", "wb") as f:
      #   f.writelines(["seconds,%d\n"%(stop - start), "Log evaluations,%d"%neval])
-
     
+    index = int(ceil(len(clustersPlateau)/2))
+    print index,len(clustersPlateau)
+    #print clustersPlateau
+    savetxt(output_folder + "/active_points.txt", clustersPlateau[index],fmt='%.6f')
+
     print neval, 'Log evaluations'
 
     #savetxt('out_points_som.txt',points,fmt='%.6f')

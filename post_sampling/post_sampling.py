@@ -77,7 +77,7 @@ def dbscan(XX,name,x,y,a,r,l):
     length = sorted(XX[:,0])[-1] - sorted(XX[:,0])[0]
     breath = sorted(XX[:,1])[-1] - sorted(XX[:,1])[0]
     eps = 2*(sqrt(length*breath/N))
-    db = DBSCAN(eps=eps,min_samples=4).fit(XX)
+    db = DBSCAN(eps=eps).fit(XX)
     
     core_samples_mask = zeros_like(db.labels_, dtype=bool)
     core_samples_mask[db.core_sample_indices_] = True
@@ -99,8 +99,7 @@ def dbscan(XX,name,x,y,a,r,l):
             # Black used for noise.
             col = 'k'
             X,Y,A,R,L = filterNoise(xy[:,0],xy[:,1],x,y,a,r,l)
-            continue
-        plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col,markeredgecolor='k', markersize=0.01)
+        #plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col,markeredgecolor='k', markersize=0.5)
         mx = mean(xy[:,0])
         my = mean(xy[:,1])
         centers.append([mx,my])
@@ -241,12 +240,15 @@ def calculateRadius(x1,y1,a1,r1,l1):
     r = r1[0]
     x = x1[0]
     y = y1[0]
+    a = a1[0]
     for i in range(len(l1)):
         if(l1[i] > m):
+            m = l1[i]
+            a = a1[i]
             r = r1[i]
             x = x1[i]
             y = y1[i]
-    return r,x,y
+    return r,x,y,a,m
 
 def run(configfile):
     try:
@@ -307,15 +309,18 @@ def run(configfile):
                 x2,y2,a2,r2,l2 = filterCluster(kmeans_clusters[i][:,0],kmeans_clusters[i][:,1],x,y,a,r,l,output_folder)
                 coordsX.append(centers[i][0])
                 coordsY.append(centers[i][1])
-                #plt.plot(kmeans_clusters[i][:,0],kmeans_clusters[i][:,1], 'o', markerfacecolor=col, markersize=5)
-                radius,xvalue,yvalue = calculateRadius(x1,y1,a1,r1,l1)
+                #plt.plot(kmeans_clusters[i][:,0],kmeans_clusters[i][:,1], 'o', markerfacecolor=col, markersize=0.5)
+                radius,xvalue,yvalue,amp,likelihood = calculateRadius(x1,y1,a1,r1,l1)
                 coordsR.append(radius)
-
+                coordsA.append(amp)
+                coordsL.append(likelihood)
         else:
-            radius,xvalue,yvalue = calculateRadius(x1,y1,a1,r1,l1)
+            radius,xvalue,yvalue,amp,likelihood = calculateRadius(x1,y1,a1,r1,l1)
             coordsX.append(xvalue)
             coordsY.append(yvalue)
             coordsR.append(radius)
+            coordsA.append(amp)
+            coordsL.aapend(likelihood)
             
     for i in range(len(coordsX)):
         circle =  plt.Circle((coordsX[i],coordsY[i]),coordsR[i],edgecolor = 'r',facecolor='none')
@@ -330,9 +335,18 @@ def run(configfile):
         fig = plt.gcf()
         fig.gca().add_artist(circle)
         #print originalData[i][0],originalData[i][1],originalData[i][3]
-    #plt.plot(coordsX, coordsY, 'o', markerfacecolor="r", markersize=2)
+    plt.plot(coordsX, coordsY, 'o', markerfacecolor="r", markersize=2)
     plt.plot(originalData[:,0], originalData[:,1], 'o', markerfacecolor="k", markersize=2)
     #plt.title('Estimated number of clusters: %d' % len(coordsX))
     plt.savefig(output_folder + "/plots/clusters_active_points.png", bbox_inches="tight")
 
     w = make_plot("summary_active_points", X,Y,A,R,L,width,height,prefix,output_folder)
+    
+    temp = zeros((len(coordsX),5))
+    temp[:,0] = coordsX
+    temp[:,1] = coordsY
+    temp[:,2] = coordsA
+    temp[:,3] = coordsR
+    temp[:,4] = coordsL
+    #print temp
+    savetxt(output_folder +"/" + prefix + "_finalData.txt", temp,fmt='%.6f')
