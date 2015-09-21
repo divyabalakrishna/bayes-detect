@@ -24,7 +24,7 @@ for i in range(num_runs):
     # In[2]:
 
     start = timeit.default_timer()
-    prefix = i
+    prefix = 4
 
 
     # In[5]:
@@ -42,6 +42,7 @@ for i in range(num_runs):
 
     #change prefix and write
     parser.set("Misc","prefix",str(prefix))
+    parser.set("Output", "plot","False")
     fileout="files"+"/"+str(prefix)+"/"+'config'+'_'+str(prefix)+'.ini'
     #fileout='config'+'_'+str(newprefix)+'.ini'
     F=open(fileout,'w')
@@ -60,7 +61,7 @@ for i in range(num_runs):
     #ns.run(fileout)
 
     # In[7]:
-    #ps.run(fileout)
+    ps.run(fileout)
 
     # In[8]:
     stop = timeit.default_timer()
@@ -68,7 +69,6 @@ for i in range(num_runs):
     
     originalData = load(output_folder +"/" + prefix + "_srcs.npy")
     finalData = loadtxt(output_folder +"/" + prefix + "_finalData.txt")
-    print originalData
     #print finalData
     tp = 0
     tn = 0
@@ -77,35 +77,17 @@ for i in range(num_runs):
     i = 0
     while i < len(finalData):
         j = 0
-        print i,j,len(finalData),len(originalData),tp
         while j < len(originalData):
             a = is_hit(finalData[i],originalData[j])
             if(a == 1):
-                print i,j,"hit"
                 tp = tp + 1
                 finalData = delete(finalData,i,0)
                 originalData = delete(originalData,j,0)
-                #print "hit",finalData[i],originalData[j]
                 i = 0
                 j = 0
                 break
             j = j + 1
         if j == len(originalData):
             i = i + 1
-    '''while i < len(finalData):
-        j = 0
-        while j < len(originalData):
-            a = is_hit(finalData[i],originalData[j])
-            if(a == 1):
-                #print i, j, finalData[i][0], finalData[i][1], originalData[j][0],originalData[j][1]
-                tp = tp + 1
-                finalData = delete(finalData,i,0)
-                originalData = delete(originalData,j,0)
-                #print "hit",finalData[i],originalData[j]
-                i = i + 1
-                j = j + 1
-                break;
-            j = j + 1
-        i = i + 1'''
     fp = len(finalData)
     print "data",tp,fp

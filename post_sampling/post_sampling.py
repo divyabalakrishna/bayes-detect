@@ -180,7 +180,7 @@ def make_plot(filename, x, y, a, r, l, width, height, prefix, output_folder):
 
     print "save"
 
-    plt.savefig(output_folder + "/plots/"+filename+".png", bbox_inches="tight")
+    plt.savefig(output_folder + "/"+filename+".png", bbox_inches="tight")
     
     #second plot of 3d parameters (x,y) vs L
     fig= plt.figure()
@@ -193,7 +193,7 @@ def make_plot(filename, x, y, a, r, l, width, height, prefix, output_folder):
     proj.set_ylabel('Y')
     proj.set_zlabel('Likelihood')
     #proj.set_title('Posteriors in 3D after cut')
-    plt.savefig(output_folder + "/plots/3d_active.png", bbox_inches="tight")
+    plt.savefig(output_folder + "/3d_active.png", bbox_inches="tight")
     return w
 
 def k_means(X, n_clusters):
@@ -338,7 +338,7 @@ def run(configfile):
     plt.plot(coordsX, coordsY, 'o', markerfacecolor="r", markersize=2)
     plt.plot(originalData[:,0], originalData[:,1], 'o', markerfacecolor="k", markersize=2)
     #plt.title('Estimated number of clusters: %d' % len(coordsX))
-    plt.savefig(output_folder + "/plots/clusters_active_points.png", bbox_inches="tight")
+    plt.savefig(output_folder + "/clusters_active_points.png", bbox_inches="tight")
 
     w = make_plot("summary_active_points", X,Y,A,R,L,width,height,prefix,output_folder)
     

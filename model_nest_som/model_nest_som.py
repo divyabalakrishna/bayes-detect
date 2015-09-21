@@ -1,11 +1,4 @@
 """
-.. module:: model_nest_som
-.. moduleauthor:: Matias Carrasco Kind
-
-"""
-__author__ = 'Matias Carrasco Kind'
-
-"""
 Many things to do, and comment and fix
 This is preliminary
 """
@@ -163,48 +156,14 @@ def voronoi_plot_2d_local(vor, ax=None):
             ncurr+=1
     return ver_all
 
-"""
-Given iteration number and cluster count at an iteration
-a 2d plot is drawn
-"""
-def make_clusterCountPlot(clusterCount):
-    fig= plt.figure()
-    proj = fig.add_subplot(111)
-    proj.plot(clusterCount[:,0],clusterCount[:,1],'o',color='#000000',markersize=10)
-    proj.set_xlim(0,width)
-    proj.set_ylim(0,height)
-    proj.set_xlabel('Iteration number')
-    proj.set_ylabel('Cluster Count')
-    
-    fig.savefig(output_folder + '/plots/clusterCount.png',bbox_inches='tight')
-
 
 """
 Given our sampled points (points) and active points (AC) and the iteration number (name)
 We make various plots (more detail in their titles)
 """
-def make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,height,points,AC,name):
+def make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,height,points,AC,name,create):
     fig=plt.figure(1,figsize=(15,10), dpi=100)
-    ax1=fig.add_subplot(2,3,1)  
-    ax1.plot(points[:name,0],points[:name,1],'k.')
-    ax1.set_xlim(0,width)
-    ax1.set_ylim(0,height)
-    ax1.set_title('Posterior points')
-    ax1.set_yticks([])
-    ax1.set_xticks([])
-    #just plotting the active points
 
-
-    
-    '''ax3=fig.add_subplot(2,3,2)
-    xt=points[:name,0]
-    yt=points[:name,1]
-    hh,locx,locy=scipy.histogram2d(xt,yt,bins=[linspace(0,width,width+1),linspace(0,height,height+1)])
-    #x,y histogram
-    #more common points will increase the histogram value and be more intense on the image
-    ax3.imshow(flipud(hh.T),extent=[0,width,0,height],aspect='normal')
-    ax3.set_title('Pseudo image from posterior')
-    '''
     #DBSCAN
 
     XX=zeros((len(AC[:,0]),2))
@@ -228,8 +187,9 @@ def make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,heig
     unique_labels = set(labels)
     colors = plt.cm.jet(linspace(0, 1, len(unique_labels)))
 
-    ax3=fig.add_subplot(2,3,2)
-    
+    if create:
+        ax3=fig.add_subplot(2,3,2)
+        ax3.set_title('Estimated number of clusters: %d' % n_clusters)
     for k, col in zip(unique_labels, colors):
         if k == -1:
             # Black used for noise.
@@ -238,90 +198,53 @@ def make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,heig
 
         class_member_mask = (labels == k)
         xy = XX[class_member_mask]
-        ax3.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col,
-             markeredgecolor='k', markersize=5)
+        if create:
+            ax3.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col, markeredgecolor='k', markersize=5)
     
-    ax3.set_title('Estimated number of clusters: %d' % n_clusters)
+    if create:
+        ax1=fig.add_subplot(2,3,1)  
+        ax1.plot(points[:name,0],points[:name,1],'k.')
+        ax1.set_xlim(0,width)
+        ax1.set_ylim(0,height)
+        ax1.set_title('Posterior points')
+        ax1.set_yticks([])
+        ax1.set_xticks([])
 
 
-    ax2=fig.add_subplot(2,3,3)
-    ax2.plot(AC[:,0],AC[:,1],'k.')
-    ax2.set_xlim(0,width)
-    ax2.set_ylim(0,height)
-    ax2.set_yticks([])
-    ax2.set_xticks([])
-    ax2.set_title('Active points')
-    #just plotting the active points
+        ax2=fig.add_subplot(2,3,3)
+        ax2.plot(AC[:,0],AC[:,1],'k.')
+        ax2.set_xlim(0,width)
+        ax2.set_ylim(0,height)
+        ax2.set_yticks([])
+        ax2.set_xticks([])
+        ax2.set_title('Active points')
+        
+        ax4=fig.add_subplot(2,3,4)
+        ax4.imshow(flipud(data),extent=[0,width,0,height])
+        ax4.set_title('Original image with noise')
+        #show input noised image
 
 
+        ax5=fig.add_subplot(2,3,5)
+        ax5.imshow(flipud(data_or),extent=[0,width,0,height])
+        ax5.set_title('Original image ')
+        #show the original image
 
-    ax4=fig.add_subplot(2,3,4)
-    ax4.imshow(flipud(data),extent=[0,width,0,height])
-    ax4.set_title('Original image with noise')
-    #show input noised image
-
-
-    ax5=fig.add_subplot(2,3,5)
-    ax5.imshow(flipud(data_or),extent=[0,width,0,height])
-    ax5.set_title('Original image ')
-    #show the original image
-
-    fname="%05d" % name
+        fname="%05d" % name
 
 
-    ax6=fig.add_subplot(2,3,6)
-    img=mpimg.imread(output_folder + '/plots/somplot/som_'+fname+'.png')
-    #earlier we created the som image. now we read it back in
-    ax6.imshow(img,extent=[0,width,0,height],aspect='normal')
-    #and display it as one of the panels in the subplot
-    ax6.set_title('SOM map ')
+        ax6=fig.add_subplot(2,3,6)
+        img=mpimg.imread(output_folder + '/plots/somplot/som_'+fname+'.png')
+        #earlier we created the som image. now we read it back in
+        ax6.imshow(img,extent=[0,width,0,height],aspect='normal')
+        #and display it as one of the panels in the subplot
+        ax6.set_title('SOM map ')
 
-    fig.savefig(output_folder + '/plots/6plot/all6_'+fname+'.png',bbox_inches='tight')
-    fig.clear()
+        fig.savefig(output_folder + '/plots/6plot/all6_'+fname+'.png',bbox_inches='tight')
+        fig.clear()
 
-    """
-    ax1 = orig
-    ax2 = orig w/ noise
-    ax3 = posterior
-    ax4 = active
-    """
-    
-    '''
-    fig=plt.figure(2,figsize=(50,50), dpi=100)
-    
-    ax1 = plt.subplot2grid((2,2), (0,0))
-    ax1.imshow(flipud(data_or),extent=[0,width,0,height])
-    ax1.set_title('Original image')
-    ax1.set_yticks([])
-    ax1.set_xticks([])
-
-    ax2 = plt.subplot2grid((2,2), (0,1))
-    ax2.imshow(flipud(data),extent=[0,width,0,height])
-    ax2.set_title('Original image with noise')
-    ax2.set_yticks([])
-    ax2.set_xticks([])
-
-    ax3 = plt.subplot2grid((2,2), (1,0))
-    ax3.plot(points[:name,0],points[:name,1],'k.')
-    ax3.set_xlim(0,width)
-    ax3.set_ylim(0,height)
-    ax3.set_title('Posterior points')
-    ax3.set_yticks([])
-    ax3.set_xticks([])
-
-    ax4 = plt.subplot2grid((2,2), (1,1))
-    ax4.plot(AC[:,0],AC[:,1],'k.')
-    ax4.set_xlim(0,width)
-    ax4.set_ylim(0,height)
-    ax4.set_yticks([])
-    ax4.set_xticks([])
-    ax4.set_title('Active points')
-
-    fig.savefig(output_folder + '/plots/4plot/4plot'+fname+'.png',bbox_inches='tight')
-    fig.clear()
-    #all these just show various panels which were already shown earlier
-   '''
     return n_clusters,highestClusterCount
+
 #make source. this is the same as image_gen's make source
 def make_source(src_array,height,width):
     x = arange(0, width)
@@ -512,37 +435,13 @@ def run(configfile):
     detected_processed_filename = prefix + "_processed_" + parser.get("Detection", "detected_filename")
     detected_all_filename = prefix + "_all_" + parser.get("Detection", "detected_filename")
 
-
-    """
-    #legacy code
-    SrcArray = [[43.71, 22.91, 10.54, 3.34],
-                [101.62, 40.60, 1.37, 3.40],
-                [92.63, 110.56, 1.81, 3.66],
-                [183.60, 85.90, 1.23, 5.06],
-                [34.12, 162.54, 1.95, 6.02],
-                [153.87, 169.18, 1.06, 6.61],
-                [155.54, 32.14, 1.46, 4.05],
-                [130.56, 183.48, 1.63, 4.11]]
-
-    data_or=make_source(src_array = SrcArray,height=height, width=width)
-    noise = noise_lvl
-    data=add_gaussian_noise(mean=0,sd=noise,data=data_or)
-    """
-
-    #more legacy code
-    #filee='../bayes-detect-master/simulated_images/multinest_toy_noised'
-    #s=open(filee,'r')
-    #data=pickle.load(s)
-    #s.close()
-
-    #sys.exit(0)
-
-    os.system('mkdir -p ' + output_folder + '/plots/')
-    #os.system('mkdir -p ' + output_folder + '/plots/detected')
-    os.system('mkdir -p ' + output_folder + '/plots/6plot')
-    #os.system('mkdir -p ' + output_folder + '/plots/4plot')
-    os.system('mkdir -p ' + output_folder + '/plots/somplot')
-    #os.system('mkdir -p ' + output_folder + '/plots/3dplot')
+    if show_plot:
+        os.system('mkdir -p ' + output_folder + '/plots/')
+        #os.system('mkdir -p ' + output_folder + '/plots/detected')
+        os.system('mkdir -p ' + output_folder + '/plots/6plot')
+        #os.system('mkdir -p ' + output_folder + '/plots/4plot')
+        os.system('mkdir -p ' + output_folder + '/plots/somplot')
+        #os.system('mkdir -p ' + output_folder + '/plots/3dplot')
     
     #noised data
     data = load(image_location)
@@ -594,22 +493,20 @@ def run(configfile):
         reject=argmin(AC[:,4])
         minL=AC[reject,4]
         if i%num_som_iter == 0:
-            
             Map,new,neval=sample_som(noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folder,show_plot,width,height,i,AC,neval,minL,nt=4,nit=150,create='yes',sample='yes')
             #create=yes -> make a new som
-            n_clusters,highestClusterCount = make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,height,points,AC,i)
+            n_clusters,highestClusterCount = make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,height,points,AC,i,show_plot)
             #print count, highestClusterCount
             clusterCount[l][1] = n_clusters
             clusterCount[l][0] = i
             l = l+1
-            print i,n_clusters, highestClusterCount["count"]
+            print i,n_clusters
             if(n_clusters > highestClusterCount["count"]):
                 clustersPlateau = []
-                print "greater"
+                clustersPlateau.append(AC)
                 highestClusterCount["count"] = n_clusters
                 highestClusterCount["iteration"] = i
             elif(n_clusters == highestClusterCount["count"]):
-                print "equal"
                 clustersPlateau.append(AC)
                 highestClusterCount["count"] = n_clusters
                 highestClusterCount["iteration"] = i
@@ -618,30 +515,15 @@ def run(configfile):
                 break
         else:
             Map,new,neval=sample_som(noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folder,show_plot,width,height,i,AC,neval,minL,nt=4,nit=150,create='no',sample='yes',inM=Map)
-        
-            #sample from the som w/o creating a new one
-    #legacy code
-        #while True:
-          #  new=sample()
-    #        newL,neval=lnlike(new,data,nlog=neval)
-    #        if newL > minL:
-    #            break
-        
+                
         newL,neval=lnlike(noise_lvl,amp_min,amp_max,rad_min,rad_max,xx,yy,width,height,data,new,data,nlog=neval)
         points[i]=AC[reject]
         AC[reject,0:4]=new
         AC[reject,4]=newL
         i = i+1
-
-    #make_clusterCountPlot(clusterCount)
-
-    #write some stats to a text file
-    #with open(output_folder + "/stats.txt", "wb") as f:
-     #   f.writelines(["seconds,%d\n"%(stop - start), "Log evaluations,%d"%neval])
     
     index = int(ceil(len(clustersPlateau)/2))
     print index,len(clustersPlateau)
-    #print clustersPlateau
     savetxt(output_folder + "/active_points.txt", clustersPlateau[index],fmt='%.6f')
 
     print neval, 'Log evaluations'
