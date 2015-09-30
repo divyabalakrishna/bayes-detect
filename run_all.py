@@ -24,14 +24,13 @@ for i in range(num_runs):
     # In[2]:
 
     start = timeit.default_timer()
-    prefix = 4
+    prefix = i
 
 
     # In[5]:
 
     #read config.ini template
     parser = SafeConfigParser()
-    #todo: do something about not using the relative path
     parser.read("config.ini")
 
     output_dir = parser.get("Misc", "location") + "/" + str(prefix)

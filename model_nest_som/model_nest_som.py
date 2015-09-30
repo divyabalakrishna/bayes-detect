@@ -500,7 +500,7 @@ def run(configfile):
             clusterCount[l][1] = n_clusters
             clusterCount[l][0] = i
             l = l+1
-            print i,n_clusters
+            print i
             if(n_clusters > highestClusterCount["count"]):
                 clustersPlateau = []
                 clustersPlateau.append(AC)
@@ -523,7 +523,6 @@ def run(configfile):
         i = i+1
     
     index = int(ceil(len(clustersPlateau)/2))
-    print index,len(clustersPlateau)
     savetxt(output_folder + "/active_points.txt", clustersPlateau[index],fmt='%.6f')
 
     print neval, 'Log evaluations'

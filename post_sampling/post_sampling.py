@@ -250,6 +250,39 @@ def calculateRadius(x1,y1,a1,r1,l1):
             y = y1[i]
     return r,x,y,a,m
 
+def is_hit(data1, data2):
+    distance = ((data1[0] - data2[0])**2 + (data1[1] - data2[1])**2)**0.5
+    if distance < (data1[3] + data2[3]):
+        return 1
+    else:
+        return 0
+
+def post_run(output_folder,prefix):
+    originalData = load(output_folder +"/" + prefix + "_srcs.npy")
+    finalData = loadtxt(output_folder +"/" + prefix + "_finalData.txt")
+    #print finalData
+    tp = 0
+    tn = 0
+    fp = 0
+    fn = 0
+    i = 0
+    while i < len(finalData):
+        j = 0
+        while j < len(originalData):
+            a = is_hit(finalData[i],originalData[j])
+            if(a == 1):
+                tp = tp + 1
+                finalData = delete(finalData,i,0)
+                originalData = delete(originalData,j,0)
+                i = 0
+                j = 0
+                break
+            j = j + 1
+        if j == len(originalData):
+            i = i + 1
+    fp = len(finalData)
+    print "TP: ",tp,"FP: ",fp,"Undetected: ",len(originalData)
+
 def run(configfile):
     try:
         os.mkdir('plots')
@@ -340,7 +373,7 @@ def run(configfile):
     #plt.title('Estimated number of clusters: %d' % len(coordsX))
     plt.savefig(output_folder + "/clusters_active_points.png", bbox_inches="tight")
 
-    w = make_plot("summary_active_points", X,Y,A,R,L,width,height,prefix,output_folder)
+    #w = make_plot("summary_active_points", X,Y,A,R,L,width,height,prefix,output_folder)
     
     temp = zeros((len(coordsX),5))
     temp[:,0] = coordsX
@@ -350,3 +383,4 @@ def run(configfile):
     temp[:,4] = coordsL
     #print temp
     savetxt(output_folder +"/" + prefix + "_finalData.txt", temp,fmt='%.6f')
+    post_run(output_folder,prefix)
