@@ -353,7 +353,7 @@ def run(configfile):
             coordsY.append(yvalue)
             coordsR.append(radius)
             coordsA.append(amp)
-            coordsL.aapend(likelihood)
+            coordsL.append(likelihood)
             
     for i in range(len(coordsX)):
         circle =  plt.Circle((coordsX[i],coordsY[i]),coordsR[i],edgecolor = 'r',facecolor='none')
@@ -372,7 +372,7 @@ def run(configfile):
     plt.plot(originalData[:,0], originalData[:,1], 'o', markerfacecolor="k", markersize=2)
     #plt.title('Estimated number of clusters: %d' % len(coordsX))
     plt.savefig(output_folder + "/clusters_active_points.png", bbox_inches="tight")
-
+    plt.show()
     #w = make_plot("summary_active_points", X,Y,A,R,L,width,height,prefix,output_folder)
     
     temp = zeros((len(coordsX),5))
@@ -384,3 +384,4 @@ def run(configfile):
     #print temp
     savetxt(output_folder +"/" + prefix + "_finalData.txt", temp,fmt='%.6f')
     post_run(output_folder,prefix)
+    return plt
