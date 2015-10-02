@@ -282,6 +282,7 @@ def post_run(output_folder,prefix):
             i = i + 1
     fp = len(finalData)
     print "TP: ",tp,"FP: ",fp,"Undetected: ",len(originalData)
+    return tp, fp, len(originalData)
 
 def run(configfile):
     try:
@@ -372,7 +373,7 @@ def run(configfile):
     plt.plot(originalData[:,0], originalData[:,1], 'o', markerfacecolor="k", markersize=2)
     #plt.title('Estimated number of clusters: %d' % len(coordsX))
     plt.savefig(output_folder + "/clusters_active_points.png", bbox_inches="tight")
-    plt.show()
+    #plt.show()
     #w = make_plot("summary_active_points", X,Y,A,R,L,width,height,prefix,output_folder)
     
     temp = zeros((len(coordsX),5))
@@ -383,5 +384,5 @@ def run(configfile):
     temp[:,4] = coordsL
     #print temp
     savetxt(output_folder +"/" + prefix + "_finalData.txt", temp,fmt='%.6f')
-    post_run(output_folder,prefix)
-    return plt
+    tp, fp, ud = post_run(output_folder,prefix)
+    return tp,fp,ud

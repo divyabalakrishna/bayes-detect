@@ -500,7 +500,7 @@ def run(configfile):
             clusterCount[l][1] = n_clusters
             clusterCount[l][0] = i
             l = l+1
-            print i
+            #print i
             if(n_clusters > highestClusterCount["count"]):
                 clustersPlateau = []
                 clustersPlateau.append(AC)
