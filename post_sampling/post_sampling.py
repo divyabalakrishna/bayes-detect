@@ -362,21 +362,21 @@ def run(configfile):
         fig.gca().add_artist(circle)
         #print coordsX[i],coordsY[i],coordsR[i]
     
-    originalData = np.load(output_folder +"/" + prefix + "_srcs.npy")
+    '''originalData = np.load(output_folder +"/" + prefix + "_srcs.npy")
 
     for i in range(len(originalData)):
         circle =  plt.Circle((originalData[i][0],originalData[i][1]),originalData[i][3],edgecolor = 'k',facecolor='none')
         fig = plt.gcf()
         fig.gca().add_artist(circle)
-        #print originalData[i][0],originalData[i][1],originalData[i][3]
+        #print originalData[i][0],originalData[i][1],originalData[i][3]'''
     plt.plot(coordsX, coordsY, 'o', markerfacecolor="r", markersize=2)
-    plt.plot(originalData[:,0], originalData[:,1], 'o', markerfacecolor="k", markersize=2)
+    #plt.plot(originalData[:,0], originalData[:,1], 'o', markerfacecolor="k", markersize=2)
     #plt.title('Estimated number of clusters: %d' % len(coordsX))
     plt.savefig(output_folder + "/clusters_active_points.png", bbox_inches="tight")
-    #plt.show()
+    plt.show()
     #w = make_plot("summary_active_points", X,Y,A,R,L,width,height,prefix,output_folder)
     
-    temp = zeros((len(coordsX),5))
+    '''temp = zeros((len(coordsX),5))
     temp[:,0] = coordsX
     temp[:,1] = coordsY
     temp[:,2] = coordsA
@@ -385,4 +385,4 @@ def run(configfile):
     #print temp
     savetxt(output_folder +"/" + prefix + "_finalData.txt", temp,fmt='%.6f')
     tp, fp, ud = post_run(output_folder,prefix)
-    return tp,fp,ud
+    return tp,fp,ud'''

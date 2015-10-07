@@ -512,6 +512,7 @@ def run(configfile):
                 highestClusterCount["iteration"] = i
             elif(n_clusters < highestClusterCount["count"]): 
                 Niter = (highestClusterCount["iteration"]*2)+1
+                print i
                 break
         else:
             Map,new,neval=sample_som(noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folder,show_plot,width,height,i,AC,neval,minL,nt=4,nit=150,create='no',sample='yes',inM=Map)
