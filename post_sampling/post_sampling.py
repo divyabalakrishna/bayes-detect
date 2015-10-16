@@ -376,7 +376,7 @@ def run(configfile):
     plt.show()
     #w = make_plot("summary_active_points", X,Y,A,R,L,width,height,prefix,output_folder)
     
-    '''temp = zeros((len(coordsX),5))
+    temp = zeros((len(coordsX),5))
     temp[:,0] = coordsX
     temp[:,1] = coordsY
     temp[:,2] = coordsA
@@ -384,5 +384,5 @@ def run(configfile):
     temp[:,4] = coordsL
     #print temp
     savetxt(output_folder +"/" + prefix + "_finalData.txt", temp,fmt='%.6f')
-    tp, fp, ud = post_run(output_folder,prefix)
-    return tp,fp,ud'''
+    #tp, fp, ud = post_run(output_folder,prefix)
+    #return tp,fp,ud

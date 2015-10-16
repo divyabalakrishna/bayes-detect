@@ -9,9 +9,8 @@ import timeit
 import warnings
 warnings.filterwarnings('ignore')
 
-def run(data):
+def run(data, prefix):
     start = timeit.default_timer()
-    prefix = 'original_images'
     num_active = 20000
 
     # In[5]:
