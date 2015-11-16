@@ -78,7 +78,7 @@ def dbscan(XX,name,x,y,a,r,l):
     breath = sorted(XX[:,1])[-1] - sorted(XX[:,1])[0]
     eps = 2*(sqrt(length*breath/N))
     db = DBSCAN(eps=eps).fit(XX)
-    
+    print eps,length,breath
     core_samples_mask = zeros_like(db.labels_, dtype=bool)
     core_samples_mask[db.core_sample_indices_] = True
     labels = db.labels_
@@ -98,8 +98,8 @@ def dbscan(XX,name,x,y,a,r,l):
         if k == -1:
             # Black used for noise.
             col = 'k'
-            X,Y,A,R,L = filterNoise(xy[:,0],xy[:,1],x,y,a,r,l)
-        #plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col,markeredgecolor='k', markersize=0.5)
+            #X,Y,A,R,L = filterNoise(xy[:,0],xy[:,1],x,y,a,r,l)
+        #plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col,markeredgecolor='k', markersize=5)
         mx = mean(xy[:,0])
         my = mean(xy[:,1])
         centers.append([mx,my])
@@ -218,24 +218,6 @@ def k_means(X, n_clusters):
 def calculateRadius(x1,y1,a1,r1,l1):
     n = int(math.ceil((len(l1)*0.1)))
     temp = zeros((n,5))
-    '''for i in range(n):
-        m = l1[0]
-        index = 0
-        j = 0
-        while j < len(l1):
-            if(l1[j] > m):
-                m = l1[j]
-                index = j
-                l1=delete(l1, j, 0)
-            j = j+1
-        temp[i][0] = x1[index]
-        temp[i][1] = y1[index]
-        temp[i][2] = a1[index]
-        temp[i][3] = r1[index]
-        temp[i][4] = m
-    r = mean(temp[:,3])
-    x = mean(temp[:,0])
-    y = mean(temp[:,1])'''
     m = l1[0]
     r = r1[0]
     x = x1[0]
@@ -259,7 +241,9 @@ def is_hit(data1, data2):
 
 def post_run(output_folder,prefix):
     originalData = load(output_folder +"/" + prefix + "_srcs.npy")
-    finalData = loadtxt(output_folder +"/" + prefix + "_finalData.txt")
+    originalData = originalData[originalData[:,1].argsort()]
+    finalData = loadtxt(output_folder +"/finalData.txt")
+    finalData = finalData[finalData[:,1].argsort()]
     #print finalData
     tp = 0
     tn = 0
@@ -326,11 +310,11 @@ def run(configfile):
         XX=zeros((len(x1),2))
         XX[:,0]=x1
         XX[:,1]=y1
-        w, xmask, xm, Lmx = binned_max(x1, l1, 0, width, 600)
+        w, xmask, xm, Lmx = binned_max(x1, l1, 0, width, 200)
         smoothed_x = smooth(Lmx[xmask])
         maxes = compute_maxes(xm[xmask], smoothed_x)
         maxX = len(maxes)
-        w, ymask, ym, Lmy = binned_max(y1, l1, 0, height, 600)
+        w, ymask, ym, Lmy = binned_max(y1, l1, 0, height, 200)
         smoothed_y = smooth(Lmy[ymask])
         maxes = compute_maxes(ym[ymask], smoothed_y)
         maxY = len(maxes)
@@ -362,16 +346,16 @@ def run(configfile):
         fig.gca().add_artist(circle)
         #print coordsX[i],coordsY[i],coordsR[i]
     
-    '''originalData = np.load(output_folder +"/" + prefix + "_srcs.npy")
+    originalData = np.load(output_folder +"/" + prefix + "_srcs.npy")
 
     for i in range(len(originalData)):
         circle =  plt.Circle((originalData[i][0],originalData[i][1]),originalData[i][3],edgecolor = 'k',facecolor='none')
         fig = plt.gcf()
         fig.gca().add_artist(circle)
-        #print originalData[i][0],originalData[i][1],originalData[i][3]'''
+        #print originalData[i][0],originalData[i][1],originalData[i][3]
     plt.plot(coordsX, coordsY, 'o', markerfacecolor="r", markersize=2)
-    #plt.plot(originalData[:,0], originalData[:,1], 'o', markerfacecolor="k", markersize=2)
-    #plt.title('Estimated number of clusters: %d' % len(coordsX))
+    plt.plot(originalData[:,0], originalData[:,1], 'o', markerfacecolor="k", markersize=2)
+    plt.title('Estimated number of clusters: %d' % len(coordsX))
     plt.savefig(output_folder + "/clusters_active_points.png", bbox_inches="tight")
     plt.show()
     #w = make_plot("summary_active_points", X,Y,A,R,L,width,height,prefix,output_folder)
@@ -383,6 +367,6 @@ def run(configfile):
     temp[:,3] = coordsR
     temp[:,4] = coordsL
     #print temp
-    savetxt(output_folder +"/" + prefix + "_finalData.txt", temp,fmt='%.6f')
-    #tp, fp, ud = post_run(output_folder,prefix)
-    #return tp,fp,ud
+    savetxt(output_folder +"/finalData.txt", temp,fmt='%.6f')
+    tp, fp, ud = post_run(output_folder,prefix)
+    return tp,fp,ud

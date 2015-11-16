@@ -161,7 +161,7 @@ def voronoi_plot_2d_local(vor, ax=None):
 Given our sampled points (points) and active points (AC) and the iteration number (name)
 We make various plots (more detail in their titles)
 """
-def make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,height,points,AC,name,create):
+def make_plot(data,data_or,output_folder,clusters,width,height,points,AC,name,create):
     fig=plt.figure(1,figsize=(15,10), dpi=100)
 
     #DBSCAN
@@ -220,13 +220,13 @@ def make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,heig
         ax2.set_title('Active points')
         
         ax4=fig.add_subplot(2,3,4)
-        ax4.imshow(flipud(data),extent=[0,width,0,height])
+        ax4.imshow(flipud(data),extent=[0,width,0,height],cmap='jet')
         ax4.set_title('Original image with noise')
         #show input noised image
 
 
         ax5=fig.add_subplot(2,3,5)
-        ax5.imshow(flipud(data_or),extent=[0,width,0,height])
+        ax5.imshow(flipud(data_or),extent=[0,width,0,height],cmap='jet')
         ax5.set_title('Original image ')
         #show the original image
 
@@ -243,7 +243,7 @@ def make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,heig
         fig.savefig(output_folder + '/plots/6plot/all6_'+fname+'.png',bbox_inches='tight')
         fig.clear()
 
-    return n_clusters,highestClusterCount
+    return n_clusters
 
 #make source. this is the same as image_gen's make source
 def make_source(src_array,height,width):
@@ -293,8 +293,17 @@ def sample():
     #random point in the specified ranges
     return array([xt,yt,at,rt])
 
+def inside_circle(xt,yt,output_folder):
+    check = False
+    X,Y,A,R,L = loadtxt(output_folder + "/finalData.txt", unpack=True)
+    for i in xrange(len(X)):
+        distance = ((X[i] - xt)**2 + (Y[i] - yt)**2)**0.5
+        if distance <= R[i]:
+            check = True
+            break
+    return check
 
-def sample_som(noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folder,show_plot,width,height,jj,active,neval,LLog_min,nt=5,nit=100,create='no',sample='yes',inM=''):
+def sample_som(iteration,noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folder,show_plot,width,height,jj,active,neval,LLog_min,nt=5,nit=100,create='no',sample='yes',inM=''):
     if create=='yes':
         DD=array([active[:,0],active[:,1],active[:,2],active[:,3]]).T
         lmin=min(active[:,4])
@@ -313,7 +322,10 @@ def sample_som(noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folde
         M.ML=ML
         ss=argsort(ML)
         M.ss=ss
-        ML2=arange(len(ML))*1.
+        #print "length",len(1,ML)
+        ML2=arange(1,len(ML))*1.
+        for i in xrange(len(ML2)):
+            ML2[i]=10*math.log(1+sqrt(ML2[i]))
         ML2=ML2/sum(ML2)
         M.ML2=ML2
         if show_plot:
@@ -332,7 +344,6 @@ def sample_som(noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folde
             ax1=plt.Axes(figt, [0., 0., 1., 1.])
             ax1.set_axis_off()
             figt.add_axes(ax1)
-
 
             for i in xrange(nt*nt):
                 if M.ivals.has_key(ss[i]):
@@ -373,12 +384,16 @@ def sample_som(noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folde
         if (M.ivals.has_key(ss[t])):
             break
     cell=ss[t]
-
+    #print jj
     
     while True:
         keep=True
         xt=random.normal(mean(active[M.ivals[cell],0]),max([std(active[M.ivals[cell],0]),0.01]))
         yt=random.normal(mean(active[M.ivals[cell],1]),max([std(active[M.ivals[cell],1]),0.01]))
+        if iteration > 1:
+            check = inside_circle(xt,yt,output_folder)
+            if (check):
+                continue
         at=random.normal(mean(active[M.ivals[cell],2]),max([std(active[M.ivals[cell],2]),0.01]))
         rt=random.normal(mean(active[M.ivals[cell],3]),max([std(active[M.ivals[cell],3]),0.01]))
         if (xt < 0) or (xt>width) : keep=False
@@ -392,7 +407,7 @@ def sample_som(noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folde
             if newL > LLog_min: break
     return [M,new,neval]
 
-def run(configfile):
+def run(configfile,iteration):
     highestClusterCount = {}
     highestClusterCount["count"] = 0
     highestClusterCount["iteration"] = 0
@@ -490,40 +505,55 @@ def run(configfile):
     count = 0
     clustersPlateau = []
     while i < Niter:
+        if i%num_som_iter == 0:
+            print i,len(AC)
+            #delete AC points with lowest 10% likelihood
+            AC = AC[AC[:,4].argsort()];
+            deleteNum = int(ceil(0.05*len(AC)))
+            for j in range(deleteNum):
+                AC = delete(AC, (0), axis=0)
+                
         reject=argmin(AC[:,4])
         minL=AC[reject,4]
         if i%num_som_iter == 0:
-            Map,new,neval=sample_som(noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folder,show_plot,width,height,i,AC,neval,minL,nt=4,nit=150,create='yes',sample='yes')
+            Map,new,neval=sample_som(iteration,noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folder,show_plot,width,height,i,AC,neval,minL,nt=4,nit=150,create='yes',sample='yes')
+                
             #create=yes -> make a new som
-            n_clusters,highestClusterCount = make_plot(data,data_or,output_folder,highestClusterCount,clusters,width,height,points,AC,i,show_plot)
-            #print count, highestClusterCount
+            n_clusters = make_plot(data,data_or,output_folder,clusters,width,height,points,AC,i,show_plot)
+            
             clusterCount[l][1] = n_clusters
             clusterCount[l][0] = i
             l = l+1
-            #print i
+                
             if(n_clusters > highestClusterCount["count"]):
+                #print "higher"
                 clustersPlateau = []
-                clustersPlateau.append(AC)
+                clustersPlateau.append(copy.deepcopy(AC))
                 highestClusterCount["count"] = n_clusters
                 highestClusterCount["iteration"] = i
+                #print "length", len(clustersPlateau), highestClusterCount
             elif(n_clusters == highestClusterCount["count"]):
-                clustersPlateau.append(AC)
+                #print "equal"
+                clustersPlateau.append(copy.deepcopy(AC))
                 highestClusterCount["count"] = n_clusters
                 highestClusterCount["iteration"] = i
-            elif(n_clusters < highestClusterCount["count"]): 
-                Niter = (highestClusterCount["iteration"]*2)+1
-                print i
+                #print "length", len(clustersPlateau), highestClusterCount
+            elif(n_clusters < highestClusterCount["count"] and n_clusters > 3): 
+                #print "less"
+                #print "length", len(clustersPlateau), highestClusterCount
+                #Niter = (highestClusterCount["iteration"]*2)+1
                 break
         else:
-            Map,new,neval=sample_som(noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folder,show_plot,width,height,i,AC,neval,minL,nt=4,nit=150,create='no',sample='yes',inM=Map)
+            Map,new,neval=sample_som(iteration,noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folder,show_plot,width,height,i,AC,neval,minL,nt=4,nit=150,create='no',sample='yes',inM=Map)
                 
         newL,neval=lnlike(noise_lvl,amp_min,amp_max,rad_min,rad_max,xx,yy,width,height,data,new,data,nlog=neval)
         points[i]=AC[reject]
         AC[reject,0:4]=new
         AC[reject,4]=newL
         i = i+1
-    
+        
     index = int(ceil(len(clustersPlateau)/2))
+    print "index",index
     savetxt(output_folder + "/active_points.txt", clustersPlateau[index],fmt='%.6f')
 
     print neval, 'Log evaluations'

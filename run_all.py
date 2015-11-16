@@ -19,8 +19,10 @@ stats = zeros((num_runs,4))
 for i in range(num_runs):
     # In[2]:
     start = timeit.default_timer()
-    prefix = i+200
-    num_active = 5000
+    prefix = i
+    num_active = 15000
+    niter = 50001
+    num_som_iter = 1000
 
     # In[5]:
 
@@ -36,8 +38,10 @@ for i in range(num_runs):
 
     #change prefix and write
     parser.set("Misc","prefix",str(prefix))
-    parser.set("Output", "plot","False")
+    parser.set("Output", "plot","True")
     parser.set("Sampling", "num_active",str(num_active))
+    parser.set("Sampling", "niter",str(niter))
+    parser.set("Sampling", "num_som_iter",str(num_som_iter))
     fileout="files"+"/"+str(prefix)+"/"+'config'+'_'+str(prefix)+'.ini'
     #fileout='config'+'_'+str(newprefix)+'.ini'
     F=open(fileout,'w')
@@ -53,7 +57,7 @@ for i in range(num_runs):
     ig.run(fileout)
 
     # In[6]:
-    ns.run(fileout)
+    ns.run(fileout,1)
 
     # In[7]:
     tp,fp,ud = ps.run(fileout)
@@ -67,5 +71,5 @@ stats[i][0] = tp
 stats[i][1] = fp
 stats[i][2] = ud
 stats[i][3] = stop - start
-savetxt("files/" + str(prefix) + "/stats.txt", stats,fmt='%.6f')
+savetxt("files/" + str(prefix) + "/stats_new_15000.txt", stats,fmt='%.6f')
     
