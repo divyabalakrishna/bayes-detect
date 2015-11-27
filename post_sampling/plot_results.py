@@ -1,202 +1,300 @@
 from numpy import *
+import copy
+from copy import deepcopy
 import scipy
 import os,sys
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.cluster import DBSCAN
 from sklearn import metrics
-
+from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import MeanShift, estimate_bandwidth
 from ConfigParser import SafeConfigParser
 from itertools import cycle
 from scipy.signal import argrelextrema
+from datetime import *
+from math import *
 
 import seaborn as sns #makes the plots look pretty
 
 from common import *
 
-try:
-    os.mkdir('plots')
-except:
-    pass
+def filterCluster(XX,YY,x,y,a,r,l,output_folder):
+    X = copy.deepcopy(x)
+    Y = copy.deepcopy(y)
+    A = copy.deepcopy(a)
+    R = copy.deepcopy(r)
+    L = copy.deepcopy(l)
+    xx = []
+    yy = []
+    aa = []
+    rr = []
+    ll = []
+    for i in range(len(XX)):
+        index = where(X==XX[i])
+        xx.append(X[index][0])
+        yy.append(Y[index][0])
+        aa.append(A[index][0])
+        rr.append(R[index][0])
+        ll.append(L[index][0])
+    temp = zeros((len(xx),5))
+    temp[:,0] = xx
+    temp[:,1] = yy
+    temp[:,2] = aa
+    temp[:,3] = rr
+    temp[:,4] = ll
+    savetxt(output_folder + "/cluster.txt", temp,fmt='%.6f')
+    X,Y,A,R,L = loadtxt(output_folder + "/cluster.txt", unpack=True)
+    return X,Y,A,R,L
 
-parser = SafeConfigParser()
-parser.read("../config.ini")
+def dbscan(x,y):
+    YY=zeros((len(x),2))
+    YY[:,0]=x
+    YY[:,1]=y
+    N = len(YY[:,0])
+    length = sorted(YY[:,0])[-1] - sorted(YY[:,0])[0]
+    breath = sorted(YY[:,1])[-1] - sorted(YY[:,1])[0]
+    eps = 4*(sqrt(length*breath/N))
+    db = DBSCAN(eps = eps).fit(YY)
+    core_samples_mask = zeros_like(db.labels_, dtype=bool)
+    core_samples_mask[db.core_sample_indices_] = True
+    labels = db.labels_
+    n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+    unique_labels = set(labels)
+    colors = plt.cm.jet(linspace(0, 1, len(unique_labels)))
+    clusters = [YY[labels == i] for i in xrange(n_clusters_)]
+    return clusters
 
-width = int(parser.get("Sampling", "width"))
-height = int(parser.get("Sampling", "height"))
+def is_hit(data1, data2):
+    distance = ((data1[0] - data2[0])**2 + (data1[1] - data2[1])**2)**0.5
+    if distance < (data1[3] + data2[3]):
+        return 1
+    else:
+        return 0
 
-amp_min = float(parser.get("Sampling", "amp_min"))
-amp_max = float(parser.get("Sampling", "amp_max"))
+def post_run(output_folder,prefix):
+    originalData = load(output_folder +"/" + prefix + "_srcs.npy")
+    originalData = originalData[originalData[:,1].argsort()]
+    finalData = loadtxt(output_folder +"/finalData.txt")
+    finalData = finalData[finalData[:,1].argsort()]
+    tp = 0
+    tn = 0
+    fp = 0
+    fn = 0
+    i = 0
+    while i < len(finalData):
+        j = 0
+        while j < len(originalData):
+            a = is_hit(finalData[i],originalData[j])
+            if(a == 1):
+                tp = tp + 1
+                finalData = delete(finalData,i,0)
+                originalData = delete(originalData,j,0)
+                i = 0
+                j = 0
+                break
+            j = j + 1
+        if j == len(originalData):
+            i = i + 1
+    fp = len(finalData)
+    print "TP: ",tp,"FP: ",fp,"Undetected: ",len(originalData)
+    return tp, fp, len(originalData)
 
-rad_min = float(parser.get("Sampling", "rad_min"))
-rad_max = float(parser.get("Sampling", "rad_max"))
+def getMinMax(x,y,l):
+    width = 200
+    height = 200
+    w, xmask, xm, Lmx = binned_max(x, l, 0, width, 400)
+    smoothed_x = smooth(Lmx[xmask])
+    maxesX = compute_maxes(xm[xmask], smoothed_x)
+    minsX = compute_mins(xm[xmask], smoothed_x)
 
-prefix = parser.get("Misc", "prefix")
-location = parser.get("Misc", "location")
-output_folder = location + "/" + prefix 
+    w, ymask, ym, Lmy = binned_max(y, l, 0, height, 400)
+    smoothed_y = smooth(Lmy[ymask])
+    maxesY = compute_maxes(ym[ymask], smoothed_y)
+    minsY = compute_mins(ym[ymask], smoothed_y)
+    return maxesX,maxesY,minsX,minsY
 
-x,y,r,a,L = loadtxt(output_folder + "/active_points.txt", unpack=True)
-d = zeros((len(x),5))
-d[:,0] = x
-d[:,1] = y
-d[:,2] = r
-d[:,3] = a
-d[:,4] = L
-def random_color():
-    return plt.cm.gist_ncar(random.random())
+def sliceValues(x,y,a,r,l,min,max,axis1):
+    ZZ=zeros((len(x),5))
+    ZZ[:,0]=x
+    ZZ[:,1]=y
+    ZZ[:,2]=a
+    ZZ[:,3]=r
+    ZZ[:,4]=l
+    i = 0
+    while i < len(ZZ):
+        if axis1 == 'x':
+            if(ZZ[i][0] < min or ZZ[i][0] > max):
+                ZZ = delete(ZZ, i, axis=0)
+            else:
+                i = i+1 
+        else:
+            if(ZZ[i][1] < min or ZZ[i][1] > max):
+                ZZ = delete(ZZ, i, axis=0)
+            else:
+                i = i+1
+    x=ZZ[:,0]
+    y=ZZ[:,1]
+    a=ZZ[:,2]
+    r=ZZ[:,3]
+    l=ZZ[:,4]
+    return x,y,a,r,l
 
-'''def find_locs(x, l, ax):
+def correctData(maxPoints, minPoints):
+    list1 = sorted(maxPoints + minPoints)
+    i = 0
+    while i < len(list1):
+        if i == 0:
+            if list1[i] in minPoints: prev = 'min'
+            elif list1[i] in maxPoints: prev = 'max'
+        else:
+            if list1[i] in minPoints: cur = 'min'
+            elif list1[i] in maxPoints: cur = 'max'
+            if prev == cur:
+                new = (list1[i-1] + list1[i])/2
+                if prev == 'min':
+                    minPoints.remove(list1[i])
+                    minPoints.remove(list1[i-1])
+                    minPoints.append(new)
+                    minPoints = sorted(minPoints)
+                if prev == 'max':
+                    maxPoints.remove(list1[i])
+                    maxPoints.remove(list1[i-1])
+                    maxPoints.append(new)
+                    maxPoints = sorted(maxPoints)
+                list1.remove(list1[i])
+                list1.remove(list1[i-1])
+                list1.append(new)
+                list1 = sorted(list1)
+                i = i - 1
+            prev = cur
+        i = i + 1
+    return list1
+
+def getObjects(x1,y1,a1,r1,l1,objects):
+    maxesX,maxesY,minsX,minsY = getMinMax(x1,y1,l1)
+    correctData(maxesX,minsX)
+    correctData(maxesY,minsY)
+    if (len(maxesX) == 1) and (len(maxesY) == 0):
+        index = argmax(l1)
+        objects.append([x1[index],y1[index],a1[index],r1[index],l1[index]])
+        return objects
+    if (len(maxesX) == 0) and (len(maxesY) == 1):
+        index = argmax(l1)
+        objects.append([x1[index],y1[index],a1[index],r1[index],l1[index]])
+        return objects
+    if (len(maxesX) == 1) and (len(maxesY) == 1):
+        index = argmax(l1)
+        objects.append([x1[index],y1[index],a1[index],r1[index],l1[index]])
+        return objects
+    elif len(maxesX) > 1:
+        if len(minsX) >= len(maxesX)-1:
+            mx = []
+            mx.append(min(x1))
+            for i in minsX:
+                mx.append(i)
+            mx.append(max(x1))
+            for i in range(len(maxesX)):
+                index0 = 0
+                index1 = 1
+                while not(maxesX[i] > mx[index0] and maxesX[i] < mx[index1]) and index1 < len(mx)-1:
+                    index0 = index0+1
+                    index1 = index0+1
+                x2,y2,a2,r2,l2 = sliceValues(x1,y1,a1,r1,l1,mx[index0],mx[index1],'x')
+                objects = getObjects(x2,y2,a2,r2,l2,objects)
+            return objects
+        else:
+            index = argmax(l1)
+            objects.append([x1[index],y1[index],a1[index],r1[index],l1[index]])
+            return objects
+    elif len(maxesY) > 1:
+        if len(minsY) >= len(maxesY)-1:
+            my = []
+            my.append(min(y1))
+            for i in minsY:
+                my.append(i)
+            my.append(max(y1))
+            for i in range(len(maxesY)):
+                index0 = i
+                index1 = i+1
+                while not(maxesY[i] > my[index0] and maxesY[i] < my[index1]) and index1 < len(my)-1:
+                    index0 = index0+1
+                    index1 = index0+1
+                x2,y2,a2,r2,l2 = sliceValues(x1,y1,a1,r1,l1,my[index0],my[index1],'y')
+                objects = getObjects(x2,y2,a2,r2,l2,objects)
+            return objects
+        else:
+            index = argmax(l1)
+            objects.append([x1[index],y1[index],a1[index],r1[index],l1[index]])
+            return objects
+    return objects
+
+def run(configfile):
+    try:
+        os.mkdir('plots')
+    except:
+        pass
+
+    parser = SafeConfigParser()
+    parser.read(configfile)
+
+    width = int(parser.get("Sampling", "width"))
+    height = int(parser.get("Sampling", "height"))
+
+    amp_min = float(parser.get("Sampling", "amp_min"))
+    amp_max = float(parser.get("Sampling", "amp_max"))
+
+    rad_min = float(parser.get("Sampling", "rad_min"))
+    rad_max = float(parser.get("Sampling", "rad_max"))
+
+    prefix = parser.get("Misc", "prefix")
+    location = parser.get("Misc", "location")
+    output_folder = location + "/" + prefix 
     
-    maxL = sorted(l)[0]
-    #print maxL
-    for x,y,r,a,l in d:
-        #if floor(maxX) == floor(x) or floor(maxX-1) == floor(x-1):
-        if maxL == l:
-            print x,y,r,a,l
-            ax.plot(x,y,'o', color="r", markersize=10)'''
+    #output parameters
+    output_filename = prefix + "_" + parser.get("Output", "output_filename")
     
-def plot_segments(ax, locs, vals, min_vals, max_vals, ax1):
-    """
-    plots each segment with a different color
-    where a segment should contain one peak
-    """
-    intervals = compute_intervals(min_vals, max_vals)
-    intervals = floor(intervals).astype("int")
-    meanX = []
-    print min_vals, max_vals
-    for x,y in intervals:
-        if(x == y):
-            x = 0
-        lower_mask = locs > x
-        upper_mask = locs < y
-        mask = logical_and(lower_mask, upper_mask)
-        ax.plot(locs[mask], vals[mask], color=random_color())
-        #find_locs(locs[mask],vals[mask], ax1)
-        meanX.append(mean(locs[mask]))
-        #color is chosen randomly, so sometimes it makes a bad selection
-    x = intervals[-1][1]
-    y = floor(sorted(locs)[-1]).astype("int")
-    lower_mask = locs > x
-    upper_mask = locs < y
-    mask = logical_and(lower_mask, upper_mask)
-    ax.plot(locs[mask], vals[mask], color=random_color())
-    #find_locs(locs[mask],vals[mask], ax1)
-    meanX.append(mean(locs[mask]))
-    return meanX
-#first plot of parameter vs L
-print "1"
-fig=plt.figure(1,figsize=(15,10), dpi=100)
-ax1=fig.add_subplot(2,3,1)
+    x,y,a,r,l = loadtxt(output_folder + "/active_points.txt", unpack=True)
+    #x,y,a,r,l = loadtxt(output_folder + "/" + output_filename, unpack=True)
 
-ax1.scatter(x,y,s=3,marker='.')
-ax1.set_xlabel('X')
-ax1.set_ylabel('Y')
-ax1.set_title('all posteriors before cut')
-ax1.set_xlim(0,width)
-ax1.set_ylim(0,height)
+    clusters = dbscan(x,y)
+    print "no of clusters:",len(clusters)
+    objects = []
 
-w, xmask, xm, Lmx = binned_max(x, L, 0, width, 600)
-#print w
-#print xmask, len(xmask), len(L)
-#print sorted(xm[xmask])#,sorted(x)
-#print Lmx 
-print "3"
-ax3=fig.add_subplot(2,3,2)
+    objects = []
+    for i in range(len(clusters)):
+        x1,y1,a1,r1,l1 = filterCluster(clusters[i][:,0],clusters[i][:,1],x,y,a,r,l,"/") 
+        objects = getObjects(x1,y1,a1,r1,l1,objects)
+    cleanlist = []
+    [cleanlist.append(x) for x in objects if x not in cleanlist]
+    print len(cleanlist)
+    for i in range(len(cleanlist)):
+        circle =  plt.Circle((cleanlist[i][0],cleanlist[i][1]),cleanlist[i][3],edgecolor = 'r',facecolor='none')
+        fig = plt.gcf()
+        fig.gca().add_artist(circle)
+    
+    originalData = np.load(output_folder +"/" + prefix + "_srcs.npy")
 
-ax3.scatter(x[w],y[w],s=3,marker='.')
-ax3.set_xlabel('X')
-ax3.set_ylabel('Y')
-ax3.set_xlim(0,width)
-ax3.set_ylim(0,height)
-ax3.set_title('posteriors after cut')
-
-
-
-print "2"
-ax2=fig.add_subplot(2,3,4)
-ax2.plot(x[w],L[w],'k,')
-ax2.set_xlabel('X')
-ax2.set_ylabel('Likelihood')
-#ax2.plot(xm[xmask],Lmx[xmask],'r-')
-smoothed_x = smooth(Lmx[xmask])
-#ax2.plot(xm[xmask], smoothed_x, 'g-')
-mins = compute_mins(xm[xmask], smoothed_x)
-maxes = compute_maxes(xm[xmask], smoothed_x)
-"""
-#plots vertical lines
-[ax2.axvline(x = val, c="b") for val in mins]
-[ax2.axvline(x = val, c="r") for val in maxes]
-"""
-mean_x=plot_segments(ax2, xm[xmask], Lmx[xmask], mins, maxes, ax3)
-ax2.set_title('X vs Likelhood after cut')
-
-w, ymask, ym, Lmy = binned_max(y, L, 0, height, 600)
-
-print "4"
-ax4=fig.add_subplot(2,3,5)
-ax4.plot(y[w],L[w],'k,')
-ax4.set_xlim(0, width)
-ax4.set_xlabel('Y')
-ax4.set_ylabel('Likelihood')
-#ax4.plot(ym[ymask],Lmy[ymask],'r-')
-smoothed_y = smooth(Lmy[ymask])
-#ax4.plot(ym[ymask], smoothed_y, 'g-')
-
-mins = compute_mins(ym[ymask], smoothed_y)
-maxes = compute_maxes(ym[ymask], smoothed_y)
-"""
-[ax4.axvline(x = val, c="b") for val in mins]
-[ax4.axvline(x = val, c="r") for val in maxes]
-"""
-mean_y=plot_segments(ax4, ym[ymask], Lmy[ymask], mins, maxes, ax3)
-
-ax4.set_title('Y vs Likelhood after cut')
-
-print "5"
-ax5 = fig.add_subplot(2,3,3)
-data = load(output_folder + "/0_clean.npy")
-ax5.imshow(flipud(data),extent=[0,width,0,height])
-ax5.set_title('Original image ')
-
-for i in range(len(mean_x)):
-    Y = []
-    X = []
-    j = 0
-    while(j<height):
-        Y.append(j)
-        j+=1
-        X.append(mean_x[i])
-    ax5.plot(X,Y)
-for i in range(len(mean_y)):
-    Y = []
-    X = []
-    j = 0
-    while(j<height):
-        Y.append(mean_y[i])
-        X.append(j)
-        j+=1
-    ax5.plot(X,Y)
-
-print "save"
-#plt.savefig('plots/summary.png',bbox_inches='tight')
-plt.savefig(output_folder + "/plots/summary_active.png", bbox_inches="tight")
-
-
-#second plot of 3d parameters (x,y) vs L
-fig= plt.figure()
-
-proj = fig.add_subplot(111, projection='3d')
-proj.scatter(x[w],y[w],L[w],s=3,marker='.')
-proj.set_xlim(0,width)
-proj.set_ylim(0,height)
-proj.set_xlabel('X')
-proj.set_ylabel('Y')
-proj.set_zlabel('Likelihood')
-#proj.set_title('Posteriors in 3D after cut')
-plt.savefig(output_folder + "/plots/3d_posterior.png", bbox_inches="tight")
-
-print "display"
-#plt.show()
+    for i in range(len(originalData)):
+        circle =  plt.Circle((originalData[i][0],originalData[i][1]),originalData[i][3],edgecolor = 'k',facecolor='none')
+        fig = plt.gcf()
+        fig.gca().add_artist(circle)
+        
+    coordsX = []
+    coordsY = []
+    for row in cleanlist:
+        coordsX.append(row[0])
+        coordsY.append(row[1])
+    plt.plot(coordsX, coordsY, 'o', markerfacecolor="r", markersize=2)
+    plt.plot(originalData[:,0], originalData[:,1], 'o', markerfacecolor="k", markersize=2)
+    plt.title('Estimated number of clusters: %d' % len(coordsX))
+    plt.savefig(output_folder + "/clusters_active_points.png", bbox_inches="tight")
+    plt.show()
+    
+    savetxt(output_folder +"/finalData.txt", cleanlist,fmt='%.6f')
+    tp, fp, ud = post_run(output_folder,prefix)
+    return tp,fp,ud
 

@@ -324,8 +324,9 @@ def sample_som(iteration,noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,ou
         M.ss=ss
         #print "length",len(1,ML)
         ML2=arange(1,len(ML))*1.
-        for i in xrange(len(ML2)):
-            ML2[i]=10*math.log(1+sqrt(ML2[i]))
+        ML2 = fliplr([ML2])[0]
+        #for i in xrange(len(ML2)):
+        #    ML2[i]=10*math.log(1+sqrt(ML2[i]))
         ML2=ML2/sum(ML2)
         M.ML2=ML2
         if show_plot:
@@ -406,6 +407,28 @@ def sample_som(iteration,noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,ou
             newL,neval=lnlike(noise_lvl,amp_min,amp_max,rad_min,rad_max,xx,yy,width,height,data,new,data,nlog=neval)
             if newL > LLog_min: break
     return [M,new,neval]
+
+def activeToPosterior(AC,points):
+    i = 0
+    while i < len(points):
+        if(points[i][0] == 0):
+            points = delete(points, i, axis=0)
+        else:
+            i = i+1
+    XX=zeros((len(points)+len(AC),5))
+    i = 0
+    while i < len(XX):
+        j = 0
+        while j < len(points):
+            XX[i] = points[i]
+            i = i + 1
+            j = j + 1
+        k = 0
+        while k < len(AC):
+            XX[i] = AC[k]
+            i = i + 1
+            k = k + 1
+    return XX
 
 def run(configfile,iteration):
     highestClusterCount = {}
@@ -504,14 +527,16 @@ def run(configfile,iteration):
     i = 0
     count = 0
     clustersPlateau = []
+    n_clusters = 0
     while i < Niter:
         if i%num_som_iter == 0:
-            print i,len(AC)
-            #delete AC points with lowest 10% likelihood
-            AC = AC[AC[:,4].argsort()];
-            deleteNum = int(ceil(0.05*len(AC)))
-            for j in range(deleteNum):
-                AC = delete(AC, (0), axis=0)
+            print i,len(AC),highestClusterCount["count"]
+            if(highestClusterCount["count"] == 1):
+                #delete AC points with lowest 10% likelihood
+                AC = AC[AC[:,4].argsort()];
+                deleteNum = int(ceil(0.05*len(AC)))
+                for j in range(deleteNum):
+                    AC = delete(AC, (0), axis=0)
                 
         reject=argmin(AC[:,4])
         minL=AC[reject,4]
@@ -532,29 +557,32 @@ def run(configfile,iteration):
                 highestClusterCount["count"] = n_clusters
                 highestClusterCount["iteration"] = i
                 #print "length", len(clustersPlateau), highestClusterCount
-            elif(n_clusters == highestClusterCount["count"]):
-                #print "equal"
-                clustersPlateau.append(copy.deepcopy(AC))
-                highestClusterCount["count"] = n_clusters
-                highestClusterCount["iteration"] = i
-                #print "length", len(clustersPlateau), highestClusterCount
-            elif(n_clusters < highestClusterCount["count"] and n_clusters > 3): 
+            elif((n_clusters <= highestClusterCount["count"] and n_clusters >= 3) or (i > (3*Niter)/5)): 
                 #print "less"
                 #print "length", len(clustersPlateau), highestClusterCount
                 #Niter = (highestClusterCount["iteration"]*2)+1
                 break
+            '''elif(n_clusters == highestClusterCount["count"]):
+                #print "equal"
+                clustersPlateau.append(copy.deepcopy(AC))
+                highestClusterCount["count"] = n_clusters
+                highestClusterCount["iteration"] = i
+                #print "length", len(clustersPlateau), highestClusterCount'''
+            
         else:
             Map,new,neval=sample_som(iteration,noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folder,show_plot,width,height,i,AC,neval,minL,nt=4,nit=150,create='no',sample='yes',inM=Map)
                 
         newL,neval=lnlike(noise_lvl,amp_min,amp_max,rad_min,rad_max,xx,yy,width,height,data,new,data,nlog=neval)
-        points[i]=AC[reject]
+        if(n_clusters > 1):
+            points[i]=AC[reject]
         AC[reject,0:4]=new
         AC[reject,4]=newL
         i = i+1
         
+    points = activeToPosterior(AC,points)
     index = int(ceil(len(clustersPlateau)/2))
     print "index",index
-    savetxt(output_folder + "/active_points.txt", clustersPlateau[index],fmt='%.6f')
+    savetxt(output_folder + "/active_points.txt", clustersPlateau[0],fmt='%.6f')
 
     print neval, 'Log evaluations'
 
@@ -574,3 +602,4 @@ def run(configfile,iteration):
     print "wrote to file: " + output_folder + "/" + detected_processed_filename
     savetxt(output_folder + "/" + detected_all_filename, d, fmt="%.6f", delimiter=",",header=header) 
     print "wrote to file: " + output_folder + "/" + detected_all_filename
+    return neval

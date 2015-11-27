@@ -36,13 +36,21 @@ def compute_mins(xlocs, yvals, window_size = 10):
     yval_locs = argrelmin(yvals, order = window_size)[0]
     if len(yval_locs) == 0:
         return [];
-    return xlocs[yval_locs]
+    minPoints = xlocs[yval_locs]
+    list1 = []
+    for i in minPoints:
+        list1.append(i)
+    return list1
 
 def compute_maxes(xlocs, yvals, window_size = 10):
     yval_locs = argrelmax(yvals, order = window_size)[0]
     if len(yval_locs) == 0:
         return [];
-    return xlocs[yval_locs]
+    maxPoints = xlocs[yval_locs]
+    list1 = []
+    for i in maxPoints:
+        list1.append(i)
+    return list1 
 
 def compute_intervals(mins, maxes):
     #first val indicates its dim
