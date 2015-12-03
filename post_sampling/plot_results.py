@@ -103,9 +103,7 @@ def post_run(output_folder,prefix):
     print "TP: ",tp,"FP: ",fp,"Undetected: ",len(originalData)
     return tp, fp, len(originalData)
 
-def getMinMax(x,y,l):
-    width = 200
-    height = 200
+def getMinMax(x,y,l,width,height):
     w, xmask, xm, Lmx = binned_max(x, l, 0, width, 400)
     smoothed_x = smooth(Lmx[xmask])
     maxesX = compute_maxes(xm[xmask], smoothed_x)
@@ -174,8 +172,8 @@ def correctData(maxPoints, minPoints):
         i = i + 1
     return list1
 
-def getObjects(x1,y1,a1,r1,l1,objects):
-    maxesX,maxesY,minsX,minsY = getMinMax(x1,y1,l1)
+def getObjects(x1,y1,a1,r1,l1,objects,width,height):
+    maxesX,maxesY,minsX,minsY = getMinMax(x1,y1,l1,width,height)
     correctData(maxesX,minsX)
     correctData(maxesY,minsY)
     if (len(maxesX) == 1) and (len(maxesY) == 0):
@@ -204,7 +202,7 @@ def getObjects(x1,y1,a1,r1,l1,objects):
                     index0 = index0+1
                     index1 = index0+1
                 x2,y2,a2,r2,l2 = sliceValues(x1,y1,a1,r1,l1,mx[index0],mx[index1],'x')
-                objects = getObjects(x2,y2,a2,r2,l2,objects)
+                objects = getObjects(x2,y2,a2,r2,l2,objects,width,height)
             return objects
         else:
             index = argmax(l1)
@@ -224,7 +222,7 @@ def getObjects(x1,y1,a1,r1,l1,objects):
                     index0 = index0+1
                     index1 = index0+1
                 x2,y2,a2,r2,l2 = sliceValues(x1,y1,a1,r1,l1,my[index0],my[index1],'y')
-                objects = getObjects(x2,y2,a2,r2,l2,objects)
+                objects = getObjects(x2,y2,a2,r2,l2,objects,width,height)
             return objects
         else:
             index = argmax(l1)
@@ -267,30 +265,36 @@ def run(configfile):
     objects = []
     for i in range(len(clusters)):
         x1,y1,a1,r1,l1 = filterCluster(clusters[i][:,0],clusters[i][:,1],x,y,a,r,l,"/") 
-        objects = getObjects(x1,y1,a1,r1,l1,objects)
+        objects = getObjects(x1,y1,a1,r1,l1,objects,width,height)
     cleanlist = []
     [cleanlist.append(x) for x in objects if x not in cleanlist]
     print len(cleanlist)
+    fig= plt.figure(1,figsize=(10,10), dpi=100)
+    proj = fig.add_subplot(111)
     for i in range(len(cleanlist)):
-        circle =  plt.Circle((cleanlist[i][0],cleanlist[i][1]),cleanlist[i][3],edgecolor = 'r',facecolor='none')
+        circle =  plt.Circle((cleanlist[i][0],cleanlist[i][1]),cleanlist[i][3],color = 'b',facecolor='none', alpha=0.3)
         fig = plt.gcf()
         fig.gca().add_artist(circle)
     
     originalData = np.load(output_folder +"/" + prefix + "_srcs.npy")
 
+    
     for i in range(len(originalData)):
-        circle =  plt.Circle((originalData[i][0],originalData[i][1]),originalData[i][3],edgecolor = 'k',facecolor='none')
+        circle =  plt.Circle((originalData[i][0],originalData[i][1]),originalData[i][3],color = 'r',facecolor='none', alpha=0.3)
         fig = plt.gcf()
         fig.gca().add_artist(circle)
         
     coordsX = []
     coordsY = []
+    
     for row in cleanlist:
         coordsX.append(row[0])
         coordsY.append(row[1])
-    plt.plot(coordsX, coordsY, 'o', markerfacecolor="r", markersize=2)
-    plt.plot(originalData[:,0], originalData[:,1], 'o', markerfacecolor="k", markersize=2)
-    plt.title('Estimated number of clusters: %d' % len(coordsX))
+    proj.plot(coordsX, coordsY, 'o', markerfacecolor="b", markersize=3)
+    proj.set_xlim(0,width)
+    proj.set_ylim(0,height)
+    
+    proj.plot(originalData[:,0], originalData[:,1], 'o', markerfacecolor="r", markersize=3)
     plt.savefig(output_folder + "/clusters_active_points.png", bbox_inches="tight")
     plt.show()
     

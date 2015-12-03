@@ -242,7 +242,36 @@ def make_plot(data,data_or,output_folder,clusters,width,height,points,AC,name,cr
 
         fig.savefig(output_folder + '/plots/6plot/all6_'+fname+'.png',bbox_inches='tight')
         fig.clear()
+        
+        fig= plt.figure(1,figsize=(10,10), dpi=100)
+        proj = fig.add_subplot(111)
+        proj.plot(AC[:,0],AC[:,1],'k.')
+        proj.set_xlim(0,width)
+        proj.set_ylim(0,height)
+        proj.set_yticks([])
+        proj.set_xticks([])
+        plt.savefig(output_folder + "/plots/active_points/active_"+fname+".png", bbox_inches="tight")
+        fig.clear()
+        
+        if create:
+            fig= plt.figure(1,figsize=(10,10), dpi=100)
+            proj = fig.add_subplot(111)
+            proj.set_title('Estimated number of clusters: %d' % n_clusters)
+        for k, col in zip(unique_labels, colors):
+            if k == -1:
+                # Black used for noise.
+                col = 'k'
+                continue
 
+            class_member_mask = (labels == k)
+            xy = XX[class_member_mask]
+            if create:
+                proj.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col, markeredgecolor='k', markersize=5)
+        if create:
+            proj.set_yticks([])
+            proj.set_xticks([])
+            plt.savefig(output_folder + "/plots/dbscan/dbscan_"+fname+".png", bbox_inches="tight")
+            fig.clear()
     return n_clusters
 
 #make source. this is the same as image_gen's make source
@@ -305,11 +334,13 @@ def inside_circle(xt,yt,output_folder):
 
 def sample_som(iteration,noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,output_folder,show_plot,width,height,jj,active,neval,LLog_min,nt=5,nit=100,create='no',sample='yes',inM=''):
     if create=='yes':
-        DD=array([active[:,0],active[:,1],active[:,2],active[:,3]]).T
+        
         lmin=min(active[:,4])
         L=active[:,4]-lmin
         lmax=max(L)
         L=L/max(L)
+        DD=array([active[:,0],active[:,1],active[:,2],active[:,3]]).T
+        #DD=array([active[:,0],active[:,1],active[:,2],active[:,3], L]).T
         M=som.SelfMap(DD,L,Ntop=nt,iterations=nit,periodic='no')
         M.create_mapF()
         M.evaluate_map()
@@ -324,8 +355,10 @@ def sample_som(iteration,noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,ou
         M.ss=ss
         #print "length",len(1,ML)
         ML2=arange(1,len(ML))*1.
-        ML2 = fliplr([ML2])[0]
-        #for i in xrange(len(ML2)):
+        #ML2 = fliplr([ML2])[0]
+        for i in xrange(len(ML2)):
+            ML2[i] = ML2[i] - i
+        ML2 = ML2*len(ML2)
         #    ML2[i]=10*math.log(1+sqrt(ML2[i]))
         ML2=ML2/sum(ML2)
         M.ML2=ML2
@@ -339,6 +372,7 @@ def sample_som(iteration,noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,ou
             YY=concatenate((YY,linspace(0,height,500),linspace(0,height,500),ones(500)*height,zeros(500)))
             TT=ones(len(XX))
             RR=array([XX,YY,TT,TT]).T
+            #RR=array([XX,YY,TT,TT,TT]).T
             M.evaluate_map(inputX=RR,inputY=zeros(len(RR)))
             figt=plt.figure(2, frameon=False)
             figt.set_size_inches(5, 5)
@@ -374,6 +408,7 @@ def sample_som(iteration,noise_lvl,xx,yy,data,amp_min,amp_max,rad_min,rad_max,ou
             figt.savefig(output_folder + '/plots/somplot/som_'+nnn+'.png',bbox_inches='tight',pad_inches=0)
             figt.clear()
             M.evaluate_map(inputX=DD,inputY=L)
+            
         
     else:
         M=inM
@@ -477,9 +512,9 @@ def run(configfile,iteration):
         os.system('mkdir -p ' + output_folder + '/plots/')
         #os.system('mkdir -p ' + output_folder + '/plots/detected')
         os.system('mkdir -p ' + output_folder + '/plots/6plot')
-        #os.system('mkdir -p ' + output_folder + '/plots/4plot')
+        os.system('mkdir -p ' + output_folder + '/plots/active_points')
         os.system('mkdir -p ' + output_folder + '/plots/somplot')
-        #os.system('mkdir -p ' + output_folder + '/plots/3dplot')
+        os.system('mkdir -p ' + output_folder + '/plots/dbscan')
     
     #noised data
     data = load(image_location)
@@ -509,6 +544,7 @@ def run(configfile,iteration):
     AC[:,3]=random.rand(Np)*(rad_max-rad_min) + rad_min
     #seed the active points with uniform random numbers in the wanted range
 
+    print "before active"
     for i in xrange(Np):
         AC[i,4],neval=lnlike(noise_lvl,amp_min,amp_max,rad_min,rad_max,xx,yy,width,height,data,AC[i,0:4],data,nlog=neval)
         #compute the log likelihood for each of those points
@@ -557,7 +593,7 @@ def run(configfile,iteration):
                 highestClusterCount["count"] = n_clusters
                 highestClusterCount["iteration"] = i
                 #print "length", len(clustersPlateau), highestClusterCount
-            elif((n_clusters <= highestClusterCount["count"] and n_clusters >= 3) or (i > (3*Niter)/5)): 
+            elif((n_clusters <= highestClusterCount["count"] and n_clusters >= 3)): 
                 #print "less"
                 #print "length", len(clustersPlateau), highestClusterCount
                 #Niter = (highestClusterCount["iteration"]*2)+1
